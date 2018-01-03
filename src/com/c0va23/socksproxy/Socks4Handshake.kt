@@ -7,7 +7,7 @@ import java.util.logging.Logger
 
 class Socks4Handshake(
     private val sourceChannel: SocketChannel
-) : AcceptConnection.SocksHandshake {
+) : SocksHandshake.SocksHandshake {
     private val NULL_BYTE: Byte = 0x00
     private val REQUEST_GRANTED: Byte = 0x5A
     private val REQUEST_REJECTED: Byte = 0x5B

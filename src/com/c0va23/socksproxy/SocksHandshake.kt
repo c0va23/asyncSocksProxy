@@ -10,7 +10,7 @@ import java.util.logging.Logger
  * Created by c0va23 on 30.12.17.
  */
 
-class AcceptConnection {
+class SocksHandshake {
     private val BUFFER_SIZE: Int = 1
     private val SOCKS4_VERSION: Byte = 0x04
 

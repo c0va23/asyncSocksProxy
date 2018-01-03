@@ -22,7 +22,7 @@ class SocksProxyServer(
     private val serverChannel = ServerSocketChannel.open()
     private val selector: Selector = Selector.open()
 
-    private val acceptConnection = AcceptConnection()
+    private val acceptConnection = SocksHandshake()
 
     private var loopEnabled = false
 
