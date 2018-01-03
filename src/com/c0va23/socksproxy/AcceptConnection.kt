@@ -1,7 +1,6 @@
 package com.c0va23.socksproxy
 
 import java.io.IOException
-import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -13,12 +12,8 @@ import java.util.logging.Logger
  */
 
 class AcceptConnection {
-    private val BUFFER_SIZE: Int = 128
+    private val BUFFER_SIZE: Int = 1
     private val SOCKS4_VERSION: Byte = 0x04
-
-    private val NULL_BYTE: Byte = 0x00
-    private val REQUEST_GRANTED: Byte = 0x5A
-    private val REQUEST_REJECTED: Byte = 0x5B
 
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
@@ -28,7 +23,7 @@ class AcceptConnection {
     private class UnexpectedCommand(code: Byte): SocksException("Unknown command code $code")
     private class UnimplementedCommand(command: Command): SocksException("Unknown command $command")
 
-    private enum class Command(
+    enum class Command(
             private val code: Byte
     ) {
         CONNECT(0x01),
@@ -41,13 +36,13 @@ class AcceptConnection {
         }
     }
 
-    private abstract class RequestData(
+    abstract class RequestData(
             val address: InetAddress,
             val port: Int,
             val command: Command
     )
 
-    private class Socks4RequestData(
+    class Socks4RequestData(
             address: InetAddress,
             port : Int,
             command: Command,
@@ -59,15 +54,37 @@ class AcceptConnection {
             command = command
     )
 
+    interface SocksHandshake {
+        fun parseRequest(): RequestData
+        fun writeResponse(targetChannel: SocketChannel?)
+    }
+
     fun handshake(clientSocketChannel: SocketChannel) : SocketChannel? {
         return try {
-            val requestData = readRequest(clientSocketChannel)
+            val readBytes = clientSocketChannel.read(buffer)
+
+            buffer.flip()
+            logger.fine("Read $readBytes bytes")
+
+            val socksVersion = buffer.get()
+            logger.fine("SOCKS version $socksVersion")
+
+            val socksHandshake = when(socksVersion) {
+                SOCKS4_VERSION -> Socks4Handshake(clientSocketChannel)
+                else -> throw UnknownVersion(socksVersion)
+            }
+
+            val requestData = socksHandshake.parseRequest()
             val remoteChannel = connect(requestData)
-            writeResponse(clientSocketChannel, null != remoteChannel)
+            socksHandshake.writeResponse(remoteChannel)
+
             remoteChannel
         } catch(e: SocksException) {
             logger.severe(e.message)
             null
+        }
+        finally {
+            buffer.clear()
         }
     }
 
@@ -84,51 +101,5 @@ class AcceptConnection {
             logger.severe(e.message)
             null
         }
-    }
-
-    private fun readRequest(clientSocketChannel : SocketChannel) : RequestData {
-        val readBytes = clientSocketChannel.read(buffer)
-        buffer.flip()
-        logger.fine("Read $readBytes bytes")
-
-        val socksVersion = buffer.get()
-        logger.fine("SOCKS version $socksVersion")
-        if(socksVersion != SOCKS4_VERSION) throw UnknownVersion(socksVersion)
-
-        val command = buffer.get()
-
-        val port = buffer.short.toInt()
-        val address = ByteArray(4)
-        buffer.get(address)
-        logger.fine("Address: ${address.joinToString(".")}:$port")
-
-        val userId = buffer.slice().asCharBuffer().toString()
-        logger.fine("User ID: $userId")
-
-        buffer.clear()
-
-        return Socks4RequestData(
-                address = Inet4Address.getByAddress(address),
-                port = port,
-                command = Command.fromByte(command),
-                userId = userId)
-    }
-
-    private fun writeResponse(clientSocketChannel: SocketChannel, granted : Boolean) {
-        buffer.put(NULL_BYTE)
-        if(granted)
-            buffer.put(REQUEST_GRANTED)
-        else
-            buffer.put(REQUEST_REJECTED)
-        buffer.putShort(NULL_BYTE.toShort())
-        buffer.putInt(NULL_BYTE.toInt())
-        buffer.flip()
-        clientSocketChannel.write(buffer)
-        if(granted)
-            logger.info("Request granted")
-        else
-            logger.warning("Request rejected")
-
-        buffer.clear()
     }
 }
