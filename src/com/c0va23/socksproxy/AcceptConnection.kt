@@ -1,6 +1,7 @@
 package com.c0va23.socksproxy
 
 import java.io.IOException
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -15,9 +16,6 @@ class AcceptConnection {
     private val BUFFER_SIZE: Int = 128
     private val SOCKS4_VERSION: Byte = 0x04
 
-    private val COMMAND_CONNECT: Byte = 0x01
-//    private val COMMAND_BINDING: Byte = 0x02
-
     private val NULL_BYTE: Byte = 0x00
     private val REQUEST_GRANTED: Byte = 0x5A
     private val REQUEST_REJECTED: Byte = 0x5B
@@ -25,14 +23,40 @@ class AcceptConnection {
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
 
-    private class UnknownVersion(version: Byte): Exception("Unknown version $version")
-    private class UnexpectedCommand(command: Byte): Exception("Unknown command $command")
+    private abstract class SocksException(message: String) : Exception(message)
+    private class UnknownVersion(version: Byte): SocksException("Unknown version $version")
+    private class UnexpectedCommand(code: Byte): SocksException("Unknown command code $code")
+    private class UnimplementedCommand(command: Command): SocksException("Unknown command $command")
 
-    private class RequestData(
-            val address : ByteArray,
-            val port : Int,
-            val command: Byte,
-            val user : String
+    private enum class Command(
+            private val code: Byte
+    ) {
+        CONNECT(0x01),
+        BINDING(0x02),
+        UDP_ASSOCIATE(0x03);
+
+        companion object {
+            private val map = Command.values().associateBy { it.code }
+            fun fromByte(code: Byte) = map[code] ?: throw UnexpectedCommand(code)
+        }
+    }
+
+    private abstract class RequestData(
+            val address: InetAddress,
+            val port: Int,
+            val command: Command
+    )
+
+    private class Socks4RequestData(
+            address: InetAddress,
+            port : Int,
+            command: Command,
+            val userId : String
+
+    ) : RequestData(
+            address = address,
+            port = port,
+            command = command
     )
 
     fun handshake(clientSocketChannel: SocketChannel) : SocketChannel? {
@@ -41,10 +65,7 @@ class AcceptConnection {
             val remoteChannel = connect(requestData)
             writeResponse(clientSocketChannel, null != remoteChannel)
             remoteChannel
-        } catch(e: UnexpectedCommand) {
-            logger.severe(e.message)
-            null
-        } catch(e: UnknownVersion) {
+        } catch(e: SocksException) {
             logger.severe(e.message)
             null
         }
@@ -53,9 +74,12 @@ class AcceptConnection {
     private fun connect(requestData: RequestData) : SocketChannel? {
         return try {
             val socketAddress = InetSocketAddress(
-                InetAddress.getByAddress(requestData.address),
+                requestData.address,
                 requestData.port)
-            SocketChannel.open(socketAddress)
+            when(requestData.command) {
+                Command.CONNECT -> SocketChannel.open(socketAddress)
+                else -> throw UnimplementedCommand(requestData.command)
+            }
         } catch(e: IOException) {
             logger.severe(e.message)
             null
@@ -68,10 +92,10 @@ class AcceptConnection {
         logger.fine("Read $readBytes bytes")
 
         val socksVersion = buffer.get()
+        logger.fine("SOCKS version $socksVersion")
         if(socksVersion != SOCKS4_VERSION) throw UnknownVersion(socksVersion)
 
         val command = buffer.get()
-        if(COMMAND_CONNECT != command) throw UnexpectedCommand(command)
 
         val port = buffer.short.toInt()
         val address = ByteArray(4)
@@ -83,7 +107,11 @@ class AcceptConnection {
 
         buffer.clear()
 
-        return RequestData(address, port, command, userId)
+        return Socks4RequestData(
+                address = Inet4Address.getByAddress(address),
+                port = port,
+                command = Command.fromByte(command),
+                userId = userId)
     }
 
     private fun writeResponse(clientSocketChannel: SocketChannel, granted : Boolean) {
