@@ -17,7 +17,7 @@ class Socks4Handshake(
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
 
-    override fun parseRequest(): AcceptConnection.Socks4RequestData {
+    override fun parseRequest(): Socks4RequestData {
         try {
             val readBytes = sourceChannel.read(buffer)
             logger.fine("Read $readBytes bytes")
@@ -34,10 +34,10 @@ class Socks4Handshake(
             val userId = buffer.slice().asCharBuffer().toString()
             logger.fine("User ID: $userId")
 
-            return AcceptConnection.Socks4RequestData(
+            return Socks4RequestData(
                     address = Inet4Address.getByAddress(address),
                     port = port,
-                    command = AcceptConnection.Command.fromByte(command),
+                    command = Command.fromByte(command),
                     userId = userId)
         }
         finally {

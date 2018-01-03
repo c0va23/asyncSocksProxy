@@ -1,7 +1,6 @@
 package com.c0va23.socksproxy
 
 import java.io.IOException
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
@@ -17,42 +16,6 @@ class AcceptConnection {
 
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
-
-    private abstract class SocksException(message: String) : Exception(message)
-    private class UnknownVersion(version: Byte): SocksException("Unknown version $version")
-    private class UnexpectedCommand(code: Byte): SocksException("Unknown command code $code")
-    private class UnimplementedCommand(command: Command): SocksException("Unknown command $command")
-
-    enum class Command(
-            private val code: Byte
-    ) {
-        CONNECT(0x01),
-        BINDING(0x02),
-        UDP_ASSOCIATE(0x03);
-
-        companion object {
-            private val map = Command.values().associateBy { it.code }
-            fun fromByte(code: Byte) = map[code] ?: throw UnexpectedCommand(code)
-        }
-    }
-
-    abstract class RequestData(
-            val address: InetAddress,
-            val port: Int,
-            val command: Command
-    )
-
-    class Socks4RequestData(
-            address: InetAddress,
-            port : Int,
-            command: Command,
-            val userId : String
-
-    ) : RequestData(
-            address = address,
-            port = port,
-            command = command
-    )
 
     interface SocksHandshake {
         fun parseRequest(): RequestData
