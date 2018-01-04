@@ -100,14 +100,15 @@ class Socks5Handshake(
             val addressType = buffer.get()
             if (0x01 != addressType.toInt()) throw UnimplementedAddressType(addressType)
 
-            val address = ByteArray(4)
-            buffer.get(address)
+            val addressBytes = ByteArray(4)
+            buffer.get(addressBytes)
+            val address = InetAddress.getByAddress(addressBytes)
 
             val port = buffer.short
-            logger.info("Address ${address.joinToString(",")}:$port")
+            logger.info("Address $address:$port")
 
             return Socks5RequestData(
-                    address = InetAddress.getByAddress(address),
+                    address = address,
                     port = port.toInt(),
                     command = Command.fromByte(command)
             )

@@ -32,15 +32,16 @@ class Socks4Handshake(
             val command = buffer.get()
 
             val port = buffer.short.toInt()
-            val address = ByteArray(4)
-            buffer.get(address)
-            logger.fine("Address: ${address.joinToString(".")}:$port")
+            val addressBytes = ByteArray(4)
+            buffer.get(addressBytes)
+            val address = Inet4Address.getByAddress(addressBytes)
+            logger.fine("Address: $address:$port")
 
             val userId = buffer.slice().asCharBuffer().toString()
             logger.fine("User ID: $userId")
 
             return Socks4RequestData(
-                    address = Inet4Address.getByAddress(address),
+                    address = address,
                     port = port,
                     command = Command.fromByte(command),
                     userId = userId)

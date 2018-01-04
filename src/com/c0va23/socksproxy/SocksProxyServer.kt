@@ -75,24 +75,26 @@ class SocksProxyServer(
     }
 
     private fun copy(sourceSelectionKey: SelectionKey) {
+        if(!sourceSelectionKey.isValid) return
+
         val sourceChannel =  sourceSelectionKey.channel() as SocketChannel
         val targetSelectionKey = connections[sourceSelectionKey]
         if(null == targetSelectionKey) {
-            logger.warning("Not registered selection key $targetSelectionKey")
+            logger.warning("Not registered selection key $sourceSelectionKey")
             return
         }
         val targetChannel = targetSelectionKey.channel() as SocketChannel
 
         try {
             val readSize = sourceChannel.read(buffer)
-            logger.info("Read $readSize bytes")
+            logger.fine("Read $readSize bytes")
             if(-1 == readSize) throw IOException("EOF")
             buffer.flip()
 
             while(buffer.hasRemaining()) {
                 val writeSize = targetChannel.write(buffer)
-                logger.info("Write $writeSize bytes")
-                logger.info("Buffer ${buffer.remaining()} bytes")
+                logger.fine("Write $writeSize bytes")
+                logger.fine("Buffer ${buffer.remaining()} bytes")
             }
         }
         catch(e: IOException) {
