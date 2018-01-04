@@ -4,17 +4,14 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.ServerSocketChannel
-import java.nio.channels.SocketChannel
+import java.nio.channels.*
 import java.util.logging.Logger
 
 /**
  * Created by c0va23 on 30.12.17.
  */
 class SocksProxyServer(
-    private val inetAddress: InetAddress,
+    private val address: InetAddress,
     private val port: Int
 ) {
     private val logger: Logger = Logger.getLogger(javaClass.name)
@@ -26,8 +23,8 @@ class SocksProxyServer(
 
     private val connections = HashMap<SelectionKey, SelectionKey>()
 
-    private val BUFFER_SIZE = 1024
-    private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
+    private val bufferSize = 1024
+    private val buffer = ByteBuffer.allocate(bufferSize)
 
     fun start() {
         loopEnabled = true
@@ -43,7 +40,7 @@ class SocksProxyServer(
     private fun startServer(): SelectionKey {
         logger.info("Socket opened")
 
-        val socketAddr = InetSocketAddress(inetAddress, port)
+        val socketAddr = InetSocketAddress(address, port)
         serverChannel.socket().bind(socketAddr)
         logger.info("Socket binded $socketAddr")
 
@@ -74,12 +71,7 @@ class SocksProxyServer(
             clientChannel.close()
             return
         }
-        clientChannel.configureBlocking(false)
-        remoteChannel.configureBlocking(false)
-        val clientSelectionKey = clientChannel.register(selector, SelectionKey.OP_READ)
-        val remoteSelectionKey = remoteChannel.register(selector, SelectionKey.OP_READ)
-        connections.put(clientSelectionKey, remoteSelectionKey)
-        connections.put(remoteSelectionKey, clientSelectionKey)
+        registerConnections(clientChannel, remoteChannel)
     }
 
     private fun copy(sourceSelectionKey: SelectionKey) {
@@ -104,16 +96,32 @@ class SocksProxyServer(
             }
         }
         catch(e: IOException) {
-            if(sourceChannel.isConnected) sourceChannel.close()
-            if(targetChannel.isConnected) targetChannel.close()
-
-            sourceSelectionKey.cancel()
-            targetSelectionKey.cancel()
+            closeConnection(sourceSelectionKey, sourceChannel)
+            closeConnection(targetSelectionKey, targetChannel)
 
             logger.info("Close tunnel")
         }
         finally {
             buffer.clear()
         }
+    }
+
+    private fun registerConnections(sourceSocketChannel: SocketChannel,
+                                   targetSocketChannel: SocketChannel) {
+        sourceSocketChannel.configureBlocking(false)
+        targetSocketChannel.configureBlocking(false)
+        val clientSelectionKey = sourceSocketChannel.register(selector, SelectionKey.OP_READ)
+        val remoteSelectionKey = targetSocketChannel.register(selector, SelectionKey.OP_READ)
+        connections.put(clientSelectionKey, remoteSelectionKey)
+        connections.put(remoteSelectionKey, clientSelectionKey)
+    }
+
+    private fun closeConnection(selectionKey: SelectionKey, socketChannel: SocketChannel) {
+        if(socketChannel.isConnected)
+            socketChannel.close()
+
+        selectionKey.cancel()
+
+        connections.remove(selectionKey)
     }
 }
