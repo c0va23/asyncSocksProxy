@@ -11,6 +11,8 @@ class Socks5Handshake(
     private val bufferSize = 128
     private val socksVersion: Byte = 0x05
 
+    private val nullByte: Byte = 0x00
+
     private val buffer = ByteBuffer.allocate(bufferSize)
     private val logger = Logger.getLogger(javaClass.name)
 
@@ -126,7 +128,7 @@ class Socks5Handshake(
                     if(connected) Response.SUCCEEDED.code
                     else Response.FAILURE.code
             )
-            buffer.put(0x00) // Reserved
+            buffer.put(nullByte) // Reserved
             buffer.put(0x01) // Address type
             buffer.put(requestData.address.address)
             buffer.putShort(requestData.port.toShort())

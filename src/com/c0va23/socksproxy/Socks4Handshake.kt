@@ -8,14 +8,19 @@ import java.util.logging.Logger
 class Socks4Handshake(
     private val sourceChannel: SocketChannel
 ) : SocksHandshake.SocksHandshake {
-    private val NULL_BYTE: Byte = 0x00
-    private val REQUEST_GRANTED: Byte = 0x5A
-    private val REQUEST_REJECTED: Byte = 0x5B
+    private val nullByte: Byte = 0x00
+    private val nullShort: Short = 0x00
+    private val nullInt: Int = 0x00
 
-    private val BUFFER_SIZE = 128
+    private val bufferSize = 128
 
     private val logger = Logger.getLogger(javaClass.name)
-    private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
+    private val buffer = ByteBuffer.allocate(bufferSize)
+
+    private enum class Response(val code: Byte) {
+        GRANTED(0x5A),
+        REJECTED(0x5B);
+    }
 
     override fun parseRequest(): Socks4RequestData {
         try {
@@ -47,13 +52,12 @@ class Socks4Handshake(
 
     override fun writeResponse(connected: Boolean, requestData: RequestData) {
         try {
-            buffer.put(NULL_BYTE)
+            buffer.put(nullByte)
             buffer.put(
-                if(connected) REQUEST_GRANTED
-                else REQUEST_REJECTED
+                (if(connected) Response.GRANTED else Response.REJECTED).code
             )
-            buffer.putShort(NULL_BYTE.toShort())
-            buffer.putInt(NULL_BYTE.toInt())
+            buffer.putShort(nullShort)
+            buffer.putInt(nullInt)
             buffer.flip()
 
             sourceChannel.write(buffer)

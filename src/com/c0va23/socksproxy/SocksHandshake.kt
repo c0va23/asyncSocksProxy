@@ -11,13 +11,13 @@ import java.util.logging.Logger
  */
 
 class SocksHandshake {
-    private val BUFFER_SIZE: Int = 1
+    private val bufferSize: Int = 1
 
-    private val SOCKS4_VERSION: Byte = 0x04
-    private val SOCKS5_VERSION: Byte = 0x05
+    private val socks4Version: Byte = 0x04
+    private val socks5Version: Byte = 0x05
 
     private val logger = Logger.getLogger(javaClass.name)
-    private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
+    private val buffer = ByteBuffer.allocate(bufferSize)
 
     interface SocksHandshake {
         fun parseRequest(): RequestData
@@ -35,8 +35,8 @@ class SocksHandshake {
             logger.fine("SOCKS version $socksVersion")
 
             val socksHandshake = when(socksVersion) {
-                SOCKS4_VERSION -> Socks4Handshake(clientSocketChannel)
-                SOCKS5_VERSION -> Socks5Handshake(clientSocketChannel)
+                socks4Version -> Socks4Handshake(clientSocketChannel)
+                socks5Version -> Socks5Handshake(clientSocketChannel)
                 else -> throw UnknownVersion(socksVersion)
             }
 
