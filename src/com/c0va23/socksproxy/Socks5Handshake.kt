@@ -7,7 +7,7 @@ import java.util.logging.Logger
 
 class Socks5Handshake(
         private val sourceChannel: SocketChannel
-) : SocksHandshake.SocksHandshake {
+) : SocksHandshake {
     private val bufferSize = 128
     private val socksVersion: Byte = 0x05
 
@@ -132,6 +132,9 @@ class Socks5Handshake(
 
             val writeBytes = sourceChannel.write(buffer)
             logger.fine("Write $writeBytes bytes")
+
+            if(connected) logger.info("Request successful")
+            else logger.warning("Request failed")
 
             if (buffer.hasRemaining())
                 logger.warning("Remain ${buffer.remaining()} bytes")

@@ -22,8 +22,6 @@ class SocksProxyServer(
     private val serverChannel = ServerSocketChannel.open()
     private val selector: Selector = Selector.open()
 
-    private val acceptConnection = SocksHandshake()
-
     private var loopEnabled = false
 
     private val connections = HashMap<SelectionKey, SelectionKey>()
@@ -71,7 +69,7 @@ class SocksProxyServer(
     private fun accept(selectionKey: SelectionKey) {
         val serverSocketChannel = selectionKey.channel() as ServerSocketChannel
         val clientChannel = serverSocketChannel.accept()
-        val remoteChannel = acceptConnection.handshake(clientChannel)
+        val remoteChannel = SocksHandshake.handshake(clientChannel)
         if(null == remoteChannel) {
             clientChannel.close()
             return

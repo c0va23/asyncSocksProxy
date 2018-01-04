@@ -7,7 +7,7 @@ import java.util.logging.Logger
 
 class Socks4Handshake(
         private val sourceChannel: SocketChannel
-) : SocksHandshake.SocksHandshake {
+) : SocksHandshake {
     private val nullByte: Byte = 0x00
     private val nullShort: Short = 0x00
     private val nullInt: Int = 0x00
