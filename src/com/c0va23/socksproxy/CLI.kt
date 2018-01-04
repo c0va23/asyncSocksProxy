@@ -12,7 +12,17 @@ fun main(args: Array<String>) {
         logger.info("Port $port")
         val address = InetAddress.getByName(host)
 
-        SocksProxyServer(address, port).start()
+        val proxyServer = SocksProxyServer(address, port)
+
+        while(true) {
+            val command = readLine()
+            when (command) {
+                "start" -> proxyServer.start()
+                "stop" -> proxyServer.stop()
+                else -> println("Unkown command '$command'")
+            }
+        }
+
     } catch (e: ArrayIndexOutOfBoundsException) {
         logger.severe("Require port argument")
     }

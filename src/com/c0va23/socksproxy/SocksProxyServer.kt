@@ -14,12 +14,21 @@ class SocksProxyServer(
     private val address: InetAddress,
     private val port: Int
 ) {
+    enum class State {
+        Started,
+        Stopping,
+        Stopped,
+    }
+
     private val logger: Logger = Logger.getLogger(javaClass.name)
 
-    private val serverChannel = ServerSocketChannel.open()
+    private var serverChannel: ServerSocketChannel? = null
     private val selector: Selector = Selector.open()
+    private val selectTimeout = 3000L
 
-    private var loopEnabled = false
+    private val waitStopDelay = selectTimeout
+
+    private var state = State.Stopped
 
     private val connections = HashMap<SelectionKey, SelectionKey>()
 
@@ -27,30 +36,50 @@ class SocksProxyServer(
     private val buffer = ByteBuffer.allocate(bufferSize)
 
     fun start() {
-        loopEnabled = true
-        val serverSelectionKey = startServer()
-        while (loopEnabled)
-            processSelector(serverSelectionKey)
+        if(State.Stopped != state) {
+            logger.warning("Can not start server in $state state")
+            return
+        }
+        state = State.Started
+        Thread {
+            val serverSelectionKey = startServer()
+            while (State.Started == state)
+                processSelector(serverSelectionKey)
+            logger.info("Stop loop")
+            state = State.Stopped
+        }.start()
     }
 
     fun stop() {
-        loopEnabled = false
+        if(State.Started != state) {
+            logger.warning("Can not stop server in $state state")
+            return
+        }
+        state = State.Stopping
+        while (State.Stopped != state) {
+            logger.warning("Wait $waitStopDelay")
+            Thread.sleep(waitStopDelay)
+        }
+        stopServer()
     }
 
     private fun startServer(): SelectionKey {
         logger.info("Socket opened")
 
         val socketAddr = InetSocketAddress(address, port)
+        val serverChannel = ServerSocketChannel.open()
         serverChannel.socket().bind(socketAddr)
         logger.info("Socket binded $socketAddr")
 
         serverChannel.configureBlocking(false)
 
+        this.serverChannel = serverChannel
+
         return serverChannel.register(selector, SelectionKey.OP_ACCEPT)
     }
 
     private fun processSelector(serverSelectionKey: SelectionKey) {
-        val selectedCount = selector.select()
+        val selectedCount = selector.select(selectTimeout)
         logger.fine("Selected keys $selectedCount")
 
         val selectedKeys = selector.selectedKeys()
@@ -98,8 +127,8 @@ class SocksProxyServer(
             }
         }
         catch(e: IOException) {
-            closeConnection(sourceSelectionKey, sourceChannel)
-            closeConnection(targetSelectionKey, targetChannel)
+            closeConnection(sourceSelectionKey)
+            closeConnection(targetSelectionKey)
 
             logger.info("Close tunnel")
         }
@@ -118,12 +147,31 @@ class SocksProxyServer(
         connections.put(remoteSelectionKey, clientSelectionKey)
     }
 
-    private fun closeConnection(selectionKey: SelectionKey, socketChannel: SocketChannel) {
+    private fun closeConnection(selectionKey: SelectionKey) {
+        val socketChannel = selectionKey.channel() as SocketChannel
+
         if(socketChannel.isConnected)
             socketChannel.close()
 
         selectionKey.cancel()
 
         connections.remove(selectionKey)
+    }
+
+    private fun stopServer() {
+        for(selectionKey in selector.keys()) {
+            val channel = selectionKey.channel()
+            when (channel) {
+                is SocketChannel -> channel.close()
+                is ServerSocketChannel -> channel.socket().close()
+            }
+            selectionKey.cancel()
+            connections.remove(selectionKey)
+            logger.info("Close socket")
+        }
+        this.serverChannel = null
+        if(connections.isNotEmpty())
+            logger.warning("${connections.size} connections exists")
+        logger.info("Server stopped")
     }
 }
