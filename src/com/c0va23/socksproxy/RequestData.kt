@@ -19,3 +19,13 @@ class Socks4RequestData(
         port = port,
         command = command
 )
+
+class Socks5RequestData(
+        address: InetAddress,
+        port : Int,
+        command: Command
+) : RequestData(
+        address = address,
+        port = port,
+        command = command
+)

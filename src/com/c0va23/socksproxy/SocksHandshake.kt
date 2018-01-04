@@ -12,14 +12,16 @@ import java.util.logging.Logger
 
 class SocksHandshake {
     private val BUFFER_SIZE: Int = 1
+
     private val SOCKS4_VERSION: Byte = 0x04
+    private val SOCKS5_VERSION: Byte = 0x05
 
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(BUFFER_SIZE)
 
     interface SocksHandshake {
         fun parseRequest(): RequestData
-        fun writeResponse(targetChannel: SocketChannel?)
+        fun writeResponse(connected: Boolean, requestData: RequestData)
     }
 
     fun handshake(clientSocketChannel: SocketChannel) : SocketChannel? {
@@ -34,12 +36,14 @@ class SocksHandshake {
 
             val socksHandshake = when(socksVersion) {
                 SOCKS4_VERSION -> Socks4Handshake(clientSocketChannel)
+                SOCKS5_VERSION -> Socks5Handshake(clientSocketChannel)
                 else -> throw UnknownVersion(socksVersion)
             }
 
             val requestData = socksHandshake.parseRequest()
             val remoteChannel = connect(requestData)
-            socksHandshake.writeResponse(remoteChannel)
+            val connected = null != remoteChannel
+            socksHandshake.writeResponse(connected, requestData)
 
             remoteChannel
         } catch(e: SocksException) {

@@ -45,12 +45,11 @@ class Socks4Handshake(
         }
     }
 
-    override fun writeResponse(targetChannel: SocketChannel?) {
-        val granted = null != targetChannel
+    override fun writeResponse(connected: Boolean, requestData: RequestData) {
         try {
             buffer.put(NULL_BYTE)
             buffer.put(
-                if(granted) REQUEST_GRANTED
+                if(connected) REQUEST_GRANTED
                 else REQUEST_REJECTED
             )
             buffer.putShort(NULL_BYTE.toShort())
@@ -58,7 +57,7 @@ class Socks4Handshake(
             buffer.flip()
 
             sourceChannel.write(buffer)
-            if (granted)
+            if (connected)
                 logger.info("Request granted")
             else
                 logger.warning("Request rejected")
