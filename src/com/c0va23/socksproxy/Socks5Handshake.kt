@@ -24,7 +24,7 @@ class Socks5Handshake(
     private enum class Method(val code: Short) {
         NO_AUTHENTICATION_REQUIRED(0x00),
         GSSAPI(0x01),
-        USERNAME_PASSWORD( 0x02),
+        USERNAME_PASSWORD(0x02),
         NO_ACCEPTABLE_METHODS(0xFF);
 
         companion object {
@@ -48,8 +48,7 @@ class Socks5Handshake(
             writeSelectedMethod(selectedMethod)
 
             return parseCommand()
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
@@ -67,8 +66,7 @@ class Socks5Handshake(
                     .slice()
                     .array()
                     .map { Method.fromValue(it.toShort()) }
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
@@ -80,8 +78,7 @@ class Socks5Handshake(
             buffer.flip()
 
             sourceChannel.write(buffer)
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
@@ -93,7 +90,7 @@ class Socks5Handshake(
             buffer.flip()
 
             val version = buffer.get()
-            if(version != socksVersion) throw UnknownVersion(version)
+            if (version != socksVersion) throw UnknownVersion(version)
             logger.fine("Version $version")
 
             val command = buffer.get()
@@ -101,7 +98,7 @@ class Socks5Handshake(
             buffer.get() // Skip reserved
 
             val addressType = buffer.get()
-            if(0x01 != addressType.toInt()) throw UnimplementedAddressType(addressType)
+            if (0x01 != addressType.toInt()) throw UnimplementedAddressType(addressType)
 
             val address = ByteArray(4)
             buffer.get(address)
@@ -115,8 +112,7 @@ class Socks5Handshake(
                     command = Command.fromByte(command)
             )
 
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
@@ -125,7 +121,7 @@ class Socks5Handshake(
         try {
             buffer.put(socksVersion)
             buffer.put(
-                    if(connected) Response.SUCCEEDED.code
+                    if (connected) Response.SUCCEEDED.code
                     else Response.FAILURE.code
             )
             buffer.put(nullByte) // Reserved
@@ -137,10 +133,9 @@ class Socks5Handshake(
             val writeBytes = sourceChannel.write(buffer)
             logger.fine("Write $writeBytes bytes")
 
-            if(buffer.hasRemaining())
+            if (buffer.hasRemaining())
                 logger.warning("Remain ${buffer.remaining()} bytes")
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }

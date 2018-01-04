@@ -24,7 +24,7 @@ class SocksHandshake {
         fun writeResponse(connected: Boolean, requestData: RequestData)
     }
 
-    fun handshake(clientSocketChannel: SocketChannel) : SocketChannel? {
+    fun handshake(clientSocketChannel: SocketChannel): SocketChannel? {
         return try {
             val readBytes = clientSocketChannel.read(buffer)
 
@@ -34,7 +34,7 @@ class SocksHandshake {
             val socksVersion = buffer.get()
             logger.fine("SOCKS version $socksVersion")
 
-            val socksHandshake = when(socksVersion) {
+            val socksHandshake = when (socksVersion) {
                 socks4Version -> Socks4Handshake(clientSocketChannel)
                 socks5Version -> Socks5Handshake(clientSocketChannel)
                 else -> throw UnknownVersion(socksVersion)
@@ -46,25 +46,24 @@ class SocksHandshake {
             socksHandshake.writeResponse(connected, requestData)
 
             remoteChannel
-        } catch(e: SocksException) {
+        } catch (e: SocksException) {
             logger.severe(e.message)
             null
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
 
-    private fun connect(requestData: RequestData) : SocketChannel? {
+    private fun connect(requestData: RequestData): SocketChannel? {
         return try {
             val socketAddress = InetSocketAddress(
-                requestData.address,
-                requestData.port)
-            when(requestData.command) {
+                    requestData.address,
+                    requestData.port)
+            when (requestData.command) {
                 Command.CONNECT -> SocketChannel.open(socketAddress)
                 else -> throw UnimplementedCommand(requestData.command)
             }
-        } catch(e: IOException) {
+        } catch (e: IOException) {
             logger.severe(e.message)
             null
         }

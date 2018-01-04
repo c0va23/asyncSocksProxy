@@ -10,9 +10,9 @@ abstract class RequestData(
 
 class Socks4RequestData(
         address: InetAddress,
-        port : Int,
+        port: Int,
         command: Command,
-        val userId : String
+        val userId: String
 
 ) : RequestData(
         address = address,
@@ -22,7 +22,7 @@ class Socks4RequestData(
 
 class Socks5RequestData(
         address: InetAddress,
-        port : Int,
+        port: Int,
         command: Command
 ) : RequestData(
         address = address,

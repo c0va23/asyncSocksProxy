@@ -6,7 +6,7 @@ import java.nio.channels.SocketChannel
 import java.util.logging.Logger
 
 class Socks4Handshake(
-    private val sourceChannel: SocketChannel
+        private val sourceChannel: SocketChannel
 ) : SocksHandshake.SocksHandshake {
     private val nullByte: Byte = 0x00
     private val nullShort: Short = 0x00
@@ -44,8 +44,7 @@ class Socks4Handshake(
                     port = port,
                     command = Command.fromByte(command),
                     userId = userId)
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
@@ -54,7 +53,7 @@ class Socks4Handshake(
         try {
             buffer.put(nullByte)
             buffer.put(
-                (if(connected) Response.GRANTED else Response.REJECTED).code
+                    (if (connected) Response.GRANTED else Response.REJECTED).code
             )
             buffer.putShort(nullShort)
             buffer.putInt(nullInt)
@@ -65,8 +64,7 @@ class Socks4Handshake(
                 logger.info("Request granted")
             else
                 logger.warning("Request rejected")
-        }
-        finally {
+        } finally {
             buffer.clear()
         }
     }
