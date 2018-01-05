@@ -7,9 +7,9 @@ val logger: Logger = Logger.getLogger("CLI")
 
 fun main(args: Array<String>) {
     try {
-        val port = args[0].toInt()
-        val host = args[1]
-        logger.info("Port $port")
+
+        val host = args.getOrNull(0) ?: "0.0.0.0"
+        val port = args.getOrNull(1)?.toInt() ?: 1080
         val address = InetAddress.getByName(host)
 
         val proxyServer = SocksProxyServer(address, port)
