@@ -1,4 +1,4 @@
-package com.c0va23.socksproxy
+package com.github.c0va23.asyncSocksProxy
 
 abstract class SocksException(message: String) : Exception(message)
 class UnknownVersion(version: Byte) :
