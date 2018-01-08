@@ -1,5 +1,7 @@
 package com.github.c0va23.asyncSocksProxy
 
+import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
@@ -16,9 +18,18 @@ class Socks5Handshake(
     private val buffer = ByteBuffer.allocate(bufferSize)
     private val logger = Logger.getLogger(javaClass.name)
 
+    private val ipv4Size = 4
+    private val ipv6Size = 16
+
     private enum class Response(val code: Byte) {
         SUCCEEDED(0x00),
         FAILURE(0x01);
+    }
+
+    private enum class AddressType(val code: Byte) {
+        Ipv4(0x01),
+        DomainName(0x03),
+        Ipv6(0x04),
     }
 
     private enum class Method(val code: Short) {
@@ -98,11 +109,11 @@ class Socks5Handshake(
             buffer.get() // Skip reserved
 
             val addressType = buffer.get()
-            if (0x01 != addressType.toInt()) throw UnimplementedAddressType(addressType)
-
-            val addressBytes = ByteArray(4)
-            buffer.get(addressBytes)
-            val address = InetAddress.getByAddress(addressBytes)
+            val address = when (addressType) {
+                AddressType.Ipv4.code -> getAddress(buffer, ipv4Size)
+                AddressType.Ipv6.code -> getAddress(buffer, ipv6Size)
+                else -> throw UnimplementedAddressType(addressType)
+            }
 
             val port = buffer.short
             logger.info("Address $address:$port")
@@ -118,6 +129,12 @@ class Socks5Handshake(
         }
     }
 
+    private fun getAddress(buffer: ByteBuffer, addressSize: Int): InetAddress {
+        val addressBytes = ByteArray(addressSize)
+        buffer.get(addressBytes)
+        return InetAddress.getByAddress(addressBytes)
+    }
+
     override fun writeResponse(connected: Boolean, requestData: RequestData) {
         try {
             buffer.put(socksVersion)
@@ -126,7 +143,13 @@ class Socks5Handshake(
                     else Response.FAILURE.code
             )
             buffer.put(nullByte) // Reserved
-            buffer.put(0x01) // Address type
+            val addressType = when (requestData.address) {
+                is Inet4Address -> AddressType.Ipv4.code
+                is Inet6Address -> AddressType.Ipv6.code
+                else -> throw Exception("Unreachable branch")
+            }
+            buffer.put(addressType
+            ) // Address type
             buffer.put(requestData.address.address)
             buffer.putShort(requestData.port.toShort())
             buffer.flip()

@@ -39,4 +39,4 @@ Socks 5 implement partly.
 |------------|--------------|
 | IP V4      | Yes          |
 | DOMAINNAME | No           |
-| IP V6      | No           |
+| IP V6      | Yes          |
