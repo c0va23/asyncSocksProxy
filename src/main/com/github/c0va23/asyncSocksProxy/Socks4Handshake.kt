@@ -2,11 +2,12 @@ package com.github.c0va23.asyncSocksProxy
 
 import java.net.Inet4Address
 import java.nio.ByteBuffer
-import java.nio.channels.SocketChannel
+import java.nio.channels.ByteChannel
+import java.nio.charset.Charset
 import java.util.logging.Logger
 
 class Socks4Handshake(
-        private val sourceChannel: SocketChannel
+        private val sourceChannel: ByteChannel
 ) : SocksHandshake {
     private val nullByte: Byte = 0x00
     private val nullShort: Short = 0x00
@@ -17,7 +18,9 @@ class Socks4Handshake(
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(bufferSize)
 
-    private enum class Response(val code: Byte) {
+    private val charset = Charset.forName("UTF-8")
+
+    enum class Response(val code: Byte) {
         GRANTED(0x5A),
         REJECTED(0x5B);
     }
@@ -37,7 +40,8 @@ class Socks4Handshake(
             val address = Inet4Address.getByAddress(addressBytes)
             logger.fine("Address: $address:$port")
 
-            val userId = buffer.slice().asCharBuffer().toString()
+            buffer.limit(buffer.limit() - 1) // Remove tailing zero byte
+            val userId = charset.decode(buffer.slice()).toString()
             logger.fine("User ID: $userId")
 
             return Socks4RequestData(
