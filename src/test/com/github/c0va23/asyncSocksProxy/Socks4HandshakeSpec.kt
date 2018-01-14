@@ -1,5 +1,3 @@
-import java.nio.ByteBuffer
-import java.nio.channels.ByteChannel
 import java.net.InetAddress
 
 import io.kotlintest.matchers.shouldBe
@@ -11,27 +9,9 @@ import com.github.c0va23.asyncSocksProxy.Socks4Handshake
 import com.github.c0va23.asyncSocksProxy.Socks4RequestData
 import com.github.c0va23.asyncSocksProxy.Command
 
+import com.github.c0va23.asyncSocksProxy.support.ByteChannelMock
+
 class Socks4HandshakeSpec : FreeSpec({
-    class MockedByteChannel(
-            val inputBuffer: ByteArray,
-            outBufferSize: Int
-    ) : ByteChannel {
-        val outBuffer = ByteBuffer.allocate(outBufferSize)
-        override fun isOpen(): Boolean = true
-        override fun close() { }
-        override fun read(byteBuffer: ByteBuffer?): Int {
-            if(null == byteBuffer) throw NullPointerException()
-            return byteBuffer.put(inputBuffer).limit()
-        }
-
-        override fun write(byteBuffer: ByteBuffer?): Int {
-            if(null == byteBuffer) throw NullPointerException()
-            return outBuffer.put(byteBuffer).limit()
-        }
-    }
-
-    val outBufferSize = 8
-
     "parseRequest()" - {
         "when input valid buffer without user" - {
             val inputBuffer = byteArrayOf(
@@ -40,7 +20,7 @@ class Socks4HandshakeSpec : FreeSpec({
                     8, 8, 8, 8, // Address
                     0 // Empty user id
             )
-            val sourceChannel = MockedByteChannel(inputBuffer, outBufferSize)
+            val sourceChannel = ByteChannelMock(listOf(inputBuffer))
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = socks4Handshake.parseRequest()
 
@@ -63,7 +43,7 @@ class Socks4HandshakeSpec : FreeSpec({
                     *userName.toByteArray(),
                     0
             )
-            val sourceChannel = MockedByteChannel(inputBuffer, outBufferSize)
+            val sourceChannel = ByteChannelMock(listOf(inputBuffer))
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = socks4Handshake.parseRequest()
 
@@ -80,7 +60,7 @@ class Socks4HandshakeSpec : FreeSpec({
 
     "writeResponse()" - {
         "when connected" - {
-            val sourceChannel = MockedByteChannel(byteArrayOf(), outBufferSize)
+            val sourceChannel = ByteChannelMock(listOf())
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = Socks4RequestData(
                     address = InetAddress.getByName("8.8.8.8"),
@@ -91,7 +71,7 @@ class Socks4HandshakeSpec : FreeSpec({
             socks4Handshake.writeResponse(true, requestData)
 
             "write valid out buffer" {
-                sourceChannel.outBuffer.array().toList() should containsAll(byteArrayOf(
+                sourceChannel.outBuffers.first().array().toList() should containsAll(byteArrayOf(
                         0,
                         Socks4Handshake.Response.GRANTED.code,
                         0, 0,
@@ -101,7 +81,7 @@ class Socks4HandshakeSpec : FreeSpec({
         }
 
         "when not connected" - {
-            val sourceChannel = MockedByteChannel(byteArrayOf(), outBufferSize)
+            val sourceChannel = ByteChannelMock(listOf())
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = Socks4RequestData(
                     address = InetAddress.getByName("0.0.0.0"),
@@ -112,7 +92,7 @@ class Socks4HandshakeSpec : FreeSpec({
             socks4Handshake.writeResponse(false, requestData)
 
             "write valid out buffer" {
-                sourceChannel.outBuffer.array().toList() should containsAll(byteArrayOf(
+                sourceChannel.outBuffers.first().array().toList() should containsAll(byteArrayOf(
                         0,
                         Socks4Handshake.Response.REJECTED.code,
                         0, 0,
