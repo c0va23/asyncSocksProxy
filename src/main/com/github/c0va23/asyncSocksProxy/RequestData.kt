@@ -12,7 +12,7 @@ data class Socks4RequestData(
         override val address: InetAddress,
         override val port: Int,
         override val command: Command,
-        val userId: String
+        val userId: String = ""
 
 ) : RequestData
 

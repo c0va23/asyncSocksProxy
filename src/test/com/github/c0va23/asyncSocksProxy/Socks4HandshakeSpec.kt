@@ -1,4 +1,4 @@
-import java.net.InetAddress
+import java.net.Inet4Address
 
 import io.kotlintest.matchers.shouldBe
 import io.kotlintest.matchers.containsAll
@@ -12,44 +12,48 @@ import com.github.c0va23.asyncSocksProxy.Command
 import com.github.c0va23.asyncSocksProxy.support.ByteChannelMock
 
 class Socks4HandshakeSpec : FreeSpec({
+    fun Int.toPortBytes() : ByteArray =
+        byteArrayOf(
+                (this / 256).toByte(),
+                (this % 256).toByte()
+        )
+
+    fun buildBuffer(command: Command, port: Int, address: Inet4Address, userId: String = "") =
+        byteArrayOf(
+                command.code,
+                *port.toPortBytes(), // Port
+                *address.address,
+                *userId.toByteArray(), 0
+        )
+
     "parseRequest()" - {
+        val port = 80
+        val address = Inet4Address.getByName("8.8.8.8") as Inet4Address
         "when input valid buffer without user" - {
-            val inputBuffer = byteArrayOf(
-                    Command.CONNECT.code,
-                    0, 80, // Port
-                    8, 8, 8, 8, // Address
-                    0 // Empty user id
-            )
+            val inputBuffer = buildBuffer(Command.CONNECT, port, address)
             val sourceChannel = ByteChannelMock(listOf(inputBuffer))
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = socks4Handshake.parseRequest()
 
             "return valid Socks4RequestData" {
                 requestData shouldBe Socks4RequestData(
-                        address =  InetAddress.getByName("8.8.8.8"),
+                        address =  address,
                         command = Command.CONNECT,
-                        port = 80,
-                        userId = ""
+                        port = port
                 )
             }
         }
 
         "when input valid buffer with user" - {
             val userName = "bob"
-            val inputBuffer = byteArrayOf(
-                    Command.CONNECT.code,
-                    0, 80, // Port
-                    8, 8, 8, 8, // Address
-                    *userName.toByteArray(),
-                    0
-            )
+            val inputBuffer = buildBuffer(Command.CONNECT, port, address, userName)
             val sourceChannel = ByteChannelMock(listOf(inputBuffer))
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = socks4Handshake.parseRequest()
 
             "return valid Socks4RequestData" {
                 requestData shouldBe Socks4RequestData(
-                        address =  InetAddress.getByName("8.8.8.8"),
+                        address = address,
                         command = Command.CONNECT,
                         port = 80,
                         userId = userName
@@ -63,7 +67,7 @@ class Socks4HandshakeSpec : FreeSpec({
             val sourceChannel = ByteChannelMock(listOf())
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = Socks4RequestData(
-                    address = InetAddress.getByName("8.8.8.8"),
+                    address = Inet4Address.getByName("8.8.8.8"),
                     port = 443,
                     command = Command.CONNECT,
                     userId = ""
@@ -84,7 +88,7 @@ class Socks4HandshakeSpec : FreeSpec({
             val sourceChannel = ByteChannelMock(listOf())
             val socks4Handshake = Socks4Handshake(sourceChannel)
             val requestData = Socks4RequestData(
-                    address = InetAddress.getByName("0.0.0.0"),
+                    address = Inet4Address.getByName("0.0.0.0"),
                     port = 443,
                     command = Command.BINDING,
                     userId = ""
