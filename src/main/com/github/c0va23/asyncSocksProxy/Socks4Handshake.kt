@@ -34,10 +34,14 @@ class Socks4Handshake(
 
             val command = buffer.get()
 
-            val port = buffer.short.toInt()
+            val portBytes = ByteArray(2)
+            buffer.get(portBytes)
+            val port = Int.fromPortBytes(portBytes)
+
             val addressBytes = ByteArray(4)
             buffer.get(addressBytes)
             val address = Inet4Address.getByAddress(addressBytes)
+
             logger.fine("Address: $address:$port")
 
             buffer.limit(buffer.limit() - 1) // Remove tailing zero byte

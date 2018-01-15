@@ -27,9 +27,25 @@ class Socks4HandshakeSpec : FreeSpec({
         )
 
     "parseRequest()" - {
-        val port = 80
         val address = Inet4Address.getByName("8.8.8.8") as Inet4Address
         "when input valid buffer without user" - {
+            val port = 80
+            val inputBuffer = buildBuffer(Command.CONNECT, port, address)
+            val sourceChannel = ByteChannelMock(listOf(inputBuffer))
+            val socks4Handshake = Socks4Handshake(sourceChannel)
+            val requestData = socks4Handshake.parseRequest()
+
+            "return valid Socks4RequestData" {
+                requestData shouldBe Socks4RequestData(
+                        address =  address,
+                        command = Command.CONNECT,
+                        port = port
+                )
+            }
+        }
+
+        "when input valid buffer with high port" - {
+            val port = 0xFFFF
             val inputBuffer = buildBuffer(Command.CONNECT, port, address)
             val sourceChannel = ByteChannelMock(listOf(inputBuffer))
             val socks4Handshake = Socks4Handshake(sourceChannel)
@@ -45,6 +61,7 @@ class Socks4HandshakeSpec : FreeSpec({
         }
 
         "when input valid buffer with user" - {
+            val port = 80
             val userName = "bob"
             val inputBuffer = buildBuffer(Command.CONNECT, port, address, userName)
             val sourceChannel = ByteChannelMock(listOf(inputBuffer))
