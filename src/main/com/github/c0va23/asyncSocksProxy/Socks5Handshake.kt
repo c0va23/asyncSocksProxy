@@ -4,11 +4,11 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.nio.ByteBuffer
-import java.nio.channels.SocketChannel
+import java.nio.channels.ByteChannel
 import java.util.logging.Logger
 
 class Socks5Handshake(
-        private val sourceChannel: SocketChannel
+        private val sourceChannel: ByteChannel
 ) : SocksHandshake {
     private val bufferSize = 128
     private val socksVersion: Byte = 0x05
@@ -26,23 +26,23 @@ class Socks5Handshake(
         FAILURE(0x01);
     }
 
-    private enum class AddressType(val code: Byte) {
+    enum class AddressType(val code: Byte) {
         Ipv4(0x01),
         DomainName(0x03),
         Ipv6(0x04),
     }
 
-    private enum class Method(val code: Short) {
+    enum class Method(val code: Byte) {
         NO_AUTHENTICATION_REQUIRED(0x00),
         GSSAPI(0x01),
         USERNAME_PASSWORD(0x02),
-        NO_ACCEPTABLE_METHODS(0xFF);
+        NO_ACCEPTABLE_METHODS(0xFF.toByte());
 
         companion object {
             private val map =
                     Method.values().associateBy { it.code }
 
-            fun fromValue(code: Short): Method =
+            fun fromValue(code: Byte): Method =
                     map[code] ?: throw UnknownMethod(code)
         }
     }
@@ -76,7 +76,7 @@ class Socks5Handshake(
             return buffer
                     .slice()
                     .array()
-                    .map { Method.fromValue(it.toShort()) }
+                    .map { Method.fromValue(it) }
         } finally {
             buffer.clear()
         }
@@ -85,7 +85,7 @@ class Socks5Handshake(
     private fun writeSelectedMethod(method: Method) {
         try {
             buffer.put(socksVersion)
-            buffer.put(method.code.toByte())
+            buffer.put(method.code)
             buffer.flip()
 
             sourceChannel.write(buffer)
@@ -115,12 +115,14 @@ class Socks5Handshake(
                 else -> throw UnimplementedAddressType(addressType)
             }
 
-            val port = buffer.short
+            val portBytes = ByteArray(2)
+            buffer.get(portBytes)
+            val port = Int.fromPortBytes(portBytes)
             logger.info("Address $address:$port")
 
             return Socks5RequestData(
                     address = address,
-                    port = port.toInt(),
+                    port = port,
                     command = Command.fromByte(command)
             )
 

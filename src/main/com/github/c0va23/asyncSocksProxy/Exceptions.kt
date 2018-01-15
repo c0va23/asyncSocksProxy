@@ -7,7 +7,7 @@ class UnknownVersion(version: Byte) :
 class UnknownCommand(code: Byte) :
         SocksException("Unknown command code $code")
 
-class UnknownMethod(code: Short) :
+class UnknownMethod(code: Byte) :
         SocksException("Unknown method $code")
 
 class UnimplementedCommand(command: Command) :
