@@ -5,6 +5,7 @@ import java.net.Inet6Address
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.channels.ByteChannel
+import java.nio.charset.Charset
 import java.util.logging.Logger
 
 class Socks5Handshake(
@@ -110,8 +111,9 @@ class Socks5Handshake(
 
             val addressType = buffer.get()
             val address = when (addressType) {
-                AddressType.Ipv4.code -> getAddress(buffer, ipv4Size)
-                AddressType.Ipv6.code -> getAddress(buffer, ipv6Size)
+                AddressType.Ipv4.code -> getIpAddress(buffer, ipv4Size)
+                AddressType.Ipv6.code -> getIpAddress(buffer, ipv6Size)
+                AddressType.DomainName.code -> getDomainName(buffer)
                 else -> throw UnimplementedAddressType(addressType)
             }
 
@@ -131,10 +133,19 @@ class Socks5Handshake(
         }
     }
 
-    private fun getAddress(buffer: ByteBuffer, addressSize: Int): InetAddress {
+    private fun getIpAddress(buffer: ByteBuffer, addressSize: Int): InetAddress {
         val addressBytes = ByteArray(addressSize)
         buffer.get(addressBytes)
         return InetAddress.getByAddress(addressBytes)
+    }
+
+    private fun getDomainName(buffer: ByteBuffer): InetAddress {
+        val length = buffer.get().toInt()
+        val domainNameBuffer = ByteArray(length)
+        val charset = Charset.forName("ASCII")
+        buffer.get(domainNameBuffer)
+        val domainName = charset.decode(ByteBuffer.wrap(domainNameBuffer)).toString()
+        return InetAddress.getByName(domainName)
     }
 
     override fun writeResponse(connected: Boolean, requestData: RequestData) {

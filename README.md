@@ -41,5 +41,5 @@ Socks 5 implement partly.
 | Type       | Implemented  |
 |------------|--------------|
 | IP V4      | Yes          |
-| DOMAINNAME | No           |
+| DOMAINNAME | Yes          |
 | IP V6      | Yes          |

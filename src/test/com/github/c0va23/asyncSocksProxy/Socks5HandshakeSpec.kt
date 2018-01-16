@@ -24,17 +24,22 @@ class Socks5HandshakeSpec : FreeSpec({
         fun buildCommandRequestPayload(
                 command: Command,
                 addressType: AddressType,
-                address: InetAddress,
+                addressHost: String,
                 port: Int
-        ) =
-                byteArrayOf(
-                        0x05, // Version
-                        command.code,
-                        0, // Reserved
-                        addressType.code,
-                        *address.address,
-                        *port.toPortBytes()
-                )
+        ): ByteArray {
+            val addressPayload = when(addressType) {
+                AddressType.Ipv4, AddressType.Ipv6 -> InetAddress.getByName(addressHost).address
+                AddressType.DomainName -> byteArrayOf(addressHost.length.toByte()) + addressHost.toByteArray()
+            }
+            return byteArrayOf(
+                    0x05, // Version
+                    command.code,
+                    0, // Reserved
+                    addressType.code,
+                    *addressPayload,
+                    *port.toPortBytes()
+            )
+        }
 
         "when request NO_AUTHENTICATION_REQUIRED" {
             val authRequestPayload = buildAuthRequestPayload(Method.NO_AUTHENTICATION_REQUIRED)
@@ -43,12 +48,12 @@ class Socks5HandshakeSpec : FreeSpec({
                     headers("Command", "Address type", "Address", "Port"),
                     row(Command.CONNECT, AddressType.Ipv4, "8.8.8.8", 80),
                     row(Command.BINDING, AddressType.Ipv6, "2001:4860:4860::8888", 443),
-                    // TODO: Use DomainName address type
+                    row(Command.CONNECT, AddressType.DomainName, "localhost", 80),
                     row(Command.UDP_ASSOCIATE, AddressType.Ipv4, "8.8.8.8", 0xFFFF)
-            )) { command: Command, addressType: AddressType, host: String, port: Int ->
-                val address = InetAddress.getByName(host)
+            )) { command: Command, addressType: AddressType, addressHost: String, port: Int ->
+                val address = InetAddress.getByName(addressHost)
                 val commandRequestPayload = buildCommandRequestPayload(
-                        command, addressType, address, port)
+                        command, addressType, addressHost, port)
                 val byteChannel = ByteChannelMock(listOf(authRequestPayload, commandRequestPayload))
                 val socks5Handshake = Socks5Handshake(byteChannel)
 
