@@ -161,8 +161,7 @@ class Socks5Handshake(
                 is Inet6Address -> AddressType.Ipv6.code
                 else -> throw Exception("Unreachable branch")
             }
-            buffer.put(addressType
-            ) // Address type
+            buffer.put(addressType) // Address type
             buffer.put(requestData.address.address)
             buffer.putShort(requestData.port.toShort())
             buffer.flip()
