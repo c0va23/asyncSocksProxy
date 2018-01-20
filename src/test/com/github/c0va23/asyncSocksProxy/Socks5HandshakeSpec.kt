@@ -7,6 +7,7 @@ import com.github.c0va23.asyncSocksProxy.Socks5Handshake.AddressType
 import com.github.c0va23.asyncSocksProxy.support.ByteChannelMock
 import io.kotlintest.matchers.shouldBe
 import io.kotlintest.matchers.shouldEqual
+import io.kotlintest.matchers.shouldThrow
 import io.kotlintest.properties.forAll
 import io.kotlintest.properties.headers
 import io.kotlintest.properties.row
@@ -68,6 +69,38 @@ class Socks5HandshakeSpec : FreeSpec({
                 val methodResponsePayload = byteChannel.outBuffers[0].array()
                 methodResponsePayload[0] shouldEqual 0x05.toByte()
                 methodResponsePayload[1] shouldEqual Method.NO_AUTHENTICATION_REQUIRED.code
+            }
+        }
+
+        "when request with not allowed authentication method" - {
+            "write only NO_ACCEPTABLE_METHODS" {
+                val authRequestPayload = buildAuthRequestPayload(Method.GSSAPI)
+                val byteChannel = ByteChannelMock(listOf(authRequestPayload))
+                val socks5Handshake = Socks5Handshake(byteChannel)
+
+                shouldThrow<NoAcceptableMethods> { socks5Handshake.parseRequest() }
+
+                byteChannel.outBuffers.size shouldEqual 1
+
+                val methodResponsePayload = byteChannel.outBuffers[0].array()
+                methodResponsePayload[0] shouldEqual 0x05.toByte()
+                methodResponsePayload[1] shouldEqual Method.NO_ACCEPTABLE_METHODS.code
+            }
+        }
+
+        "when request with unsupported method" - {
+            "write only NO_ACCEPTABLE_METHODS" {
+                val authRequestPayload = byteArrayOf(1, 12)
+                val byteChannel = ByteChannelMock(listOf(authRequestPayload))
+                val socks5Handshake = Socks5Handshake(byteChannel)
+
+                shouldThrow<NoAcceptableMethods> { socks5Handshake.parseRequest() }
+
+                byteChannel.outBuffers.size shouldEqual 1
+
+                val methodResponsePayload = byteChannel.outBuffers[0].array()
+                methodResponsePayload[0] shouldEqual 0x05.toByte()
+                methodResponsePayload[1] shouldEqual Method.NO_ACCEPTABLE_METHODS.code
             }
         }
     }

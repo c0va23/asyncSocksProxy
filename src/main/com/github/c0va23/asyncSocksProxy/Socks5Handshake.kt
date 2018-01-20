@@ -43,8 +43,7 @@ class Socks5Handshake(
             private val map =
                     Method.values().associateBy { it.code }
 
-            fun fromValue(code: Byte): Method =
-                    map[code] ?: throw UnknownMethod(code)
+            fun fromValue(code: Byte): Method? = map[code]
         }
     }
 
@@ -58,6 +57,9 @@ class Socks5Handshake(
                     ?: Method.NO_ACCEPTABLE_METHODS
 
             writeSelectedMethod(selectedMethod)
+
+            if(Method.NO_ACCEPTABLE_METHODS == selectedMethod)
+                throw NoAcceptableMethods(methods.map { it.toString() })
 
             return parseCommand()
         } finally {
@@ -74,10 +76,9 @@ class Socks5Handshake(
             val numberMethods = buffer.get()
             logger.fine("$numberMethods methods")
 
-            return buffer
-                    .slice()
-                    .array()
-                    .map { Method.fromValue(it) }
+            return (0 until numberMethods)
+                    .map { buffer.get() }
+                    .mapNotNull { Method.fromValue(it) }
         } finally {
             buffer.clear()
         }
