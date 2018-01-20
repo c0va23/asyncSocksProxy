@@ -22,7 +22,7 @@ class Socks5Handshake(
     private val ipv4Size = 4
     private val ipv6Size = 16
 
-    private enum class Response(val code: Byte) {
+    enum class Response(val code: Byte) {
         SUCCEEDED(0x00),
         FAILURE(0x01);
     }

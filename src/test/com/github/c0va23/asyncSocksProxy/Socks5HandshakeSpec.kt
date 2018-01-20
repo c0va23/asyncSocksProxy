@@ -11,6 +11,8 @@ import io.kotlintest.properties.forAll
 import io.kotlintest.properties.headers
 import io.kotlintest.properties.row
 import io.kotlintest.properties.table
+import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.InetAddress
 
 class Socks5HandshakeSpec : FreeSpec({
@@ -66,6 +68,75 @@ class Socks5HandshakeSpec : FreeSpec({
                 val methodResponsePayload = byteChannel.outBuffers[0].array()
                 methodResponsePayload[0] shouldEqual 0x05.toByte()
                 methodResponsePayload[1] shouldEqual Method.NO_AUTHENTICATION_REQUIRED.code
+            }
+        }
+    }
+
+    "writeResponse()" - {
+        val socketTable =table(
+                headers("IP", "Address type", "Port"),
+                row(Inet4Address.getByName("127.0.0.1"), AddressType.Ipv4, 80),
+                row(Inet6Address.getByName("::1"), AddressType.Ipv6, 1080)
+        )
+        "when connected" - {
+            "write success response" {
+                forAll(socketTable) { address: InetAddress, addressType: AddressType, port: Int ->
+                    val byteChannel = ByteChannelMock(listOf())
+                    val socks5Handshake = Socks5Handshake(byteChannel)
+
+                    val requestData = Socks5RequestData(
+                            address = address,
+                            port = port,
+                            command = Command.CONNECT
+                    )
+
+                    socks5Handshake.writeResponse(true, requestData)
+
+                    val responseBytes = byteChannel.outBuffers.first().array()
+
+                    responseBytes[0] shouldEqual 0x05.toByte()
+                    responseBytes[1] shouldEqual Socks5Handshake.Response.SUCCEEDED.code
+                    responseBytes[2] shouldEqual 0.toByte()
+                    responseBytes[3] shouldEqual addressType.code
+
+                    val size = responseBytes.size
+                    val addressBytes = responseBytes.slice(4 until size-2)
+                    addressBytes shouldEqual address.address.toList()
+
+                    val portBytes = responseBytes.slice(size-2 until size)
+                    portBytes shouldBe port.toPortBytes().toList()
+                }
+            }
+        }
+
+        "when not connected" - {
+            "write reject response" {
+                forAll(socketTable) { address: InetAddress, addressType: AddressType, port: Int ->
+                    val byteChannel = ByteChannelMock(listOf())
+                    val socks5Handshake = Socks5Handshake(byteChannel)
+
+                    val requestData = Socks5RequestData(
+                            address = address,
+                            port = port,
+                            command = Command.CONNECT
+                    )
+
+                    socks5Handshake.writeResponse(false, requestData)
+
+                    val responseBytes = byteChannel.outBuffers.first().array()
+
+                    responseBytes[0] shouldEqual 0x05.toByte()
+                    responseBytes[1] shouldEqual Socks5Handshake.Response.FAILURE.code
+                    responseBytes[2] shouldEqual 0.toByte()
+                    responseBytes[3] shouldEqual addressType.code
+
+                    val size = responseBytes.size
+                    val addressBytes = responseBytes.slice(4 until size-2)
+                    addressBytes shouldEqual address.address.toList()
+
+                    val portBytes = responseBytes.slice(size-2 until size)
+                    portBytes shouldBe port.toPortBytes().toList()
+                }
             }
         }
     }
