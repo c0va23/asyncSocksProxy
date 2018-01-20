@@ -2,6 +2,8 @@
 
 Implement Socks 4/5 tunnel for JVM.
 
+[![Release](https://jitpack.io/v/c0va23/asyncSocksProxy.svg)](https://jitpack.io/#c0va23/asyncSocksProxy)
+
 # Socks 4
 
 Socks 4 implemented partly.
