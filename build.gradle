@@ -5,7 +5,7 @@ group = "com.github.c0va23"
 version = "0.0.3"
 
 buildscript {
-    ext.kotlin_version = '1.1.51'
+    ext.kotlin_version = '1.2.20'
 
     repositories {
         mavenCentral()
@@ -27,7 +27,12 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    testCompile "io.kotlintest:kotlintest:2.0.7"
+    testCompile("io.kotlintest:kotlintest:2.0.7") {
+        // Workaround for kotlin 1.2. Remove it when kotlintest be support kotlin 1.2
+        exclude group: "org.jetbrains.kotlin"
+    }
+    // Workaround for kotlin 1.2. Remove it when kotlintest be support kotlin 1.2
+    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 }
