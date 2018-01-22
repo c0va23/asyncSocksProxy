@@ -66,7 +66,7 @@ class Socks5HandshakeSpec : FreeSpec({
                         port = port
                 )
 
-                val methodResponsePayload = byteChannel.outBuffers[0].array()
+                val methodResponsePayload = byteChannel.outBuffers[0]
                 methodResponsePayload[0] shouldEqual 0x05.toByte()
                 methodResponsePayload[1] shouldEqual Method.NO_AUTHENTICATION_REQUIRED.code
             }
@@ -82,7 +82,7 @@ class Socks5HandshakeSpec : FreeSpec({
 
                 byteChannel.outBuffers.size shouldEqual 1
 
-                val methodResponsePayload = byteChannel.outBuffers[0].array()
+                val methodResponsePayload = byteChannel.outBuffers[0]
                 methodResponsePayload[0] shouldEqual 0x05.toByte()
                 methodResponsePayload[1] shouldEqual Method.NO_ACCEPTABLE_METHODS.code
             }
@@ -98,7 +98,7 @@ class Socks5HandshakeSpec : FreeSpec({
 
                 byteChannel.outBuffers.size shouldEqual 1
 
-                val methodResponsePayload = byteChannel.outBuffers[0].array()
+                val methodResponsePayload = byteChannel.outBuffers[0]
                 methodResponsePayload[0] shouldEqual 0x05.toByte()
                 methodResponsePayload[1] shouldEqual Method.NO_ACCEPTABLE_METHODS.code
             }
@@ -125,7 +125,7 @@ class Socks5HandshakeSpec : FreeSpec({
 
                     socks5Handshake.writeResponse(true, requestData)
 
-                    val responseBytes = byteChannel.outBuffers.first().array()
+                    val responseBytes = byteChannel.outBuffers.first()
 
                     responseBytes[0] shouldEqual 0x05.toByte()
                     responseBytes[1] shouldEqual Socks5Handshake.Response.SUCCEEDED.code
@@ -156,7 +156,7 @@ class Socks5HandshakeSpec : FreeSpec({
 
                     socks5Handshake.writeResponse(false, requestData)
 
-                    val responseBytes = byteChannel.outBuffers.first().array()
+                    val responseBytes = byteChannel.outBuffers.first()
 
                     responseBytes[0] shouldEqual 0x05.toByte()
                     responseBytes[1] shouldEqual Socks5Handshake.Response.FAILURE.code

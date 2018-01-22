@@ -8,7 +8,7 @@ class ByteChannelMock(
 ) : ByteChannel {
     private val bufferIterator = inputBuffers.iterator()
 
-    val outBuffers = mutableListOf<ByteBuffer>()
+    val outBuffers = mutableListOf<ByteArray>()
 
     override fun isOpen(): Boolean = true
 
@@ -22,8 +22,9 @@ class ByteChannelMock(
 
     override fun write(byteBuffer: ByteBuffer?): Int {
         if (null == byteBuffer) throw NullPointerException()
-        val outBuffer = ByteBuffer.allocate(byteBuffer.limit())
+        val outBuffer = ByteArray(byteBuffer.limit())
         outBuffers.add(outBuffer)
-        return outBuffer.put(byteBuffer).limit()
+        byteBuffer.get(outBuffer)
+        return outBuffer.size
     }
 }

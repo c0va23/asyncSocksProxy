@@ -92,7 +92,7 @@ class Socks4HandshakeSpec : FreeSpec({
             socks4Handshake.writeResponse(true, requestData)
 
             "write valid out buffer" {
-                sourceChannel.outBuffers.first().array().toList() should containsAll(byteArrayOf(
+                sourceChannel.outBuffers.first().toList() should containsAll(byteArrayOf(
                         0,
                         Socks4Handshake.Response.GRANTED.code,
                         0, 0,
@@ -113,7 +113,7 @@ class Socks4HandshakeSpec : FreeSpec({
             socks4Handshake.writeResponse(false, requestData)
 
             "write valid out buffer" {
-                sourceChannel.outBuffers.first().array().toList() should containsAll(byteArrayOf(
+                sourceChannel.outBuffers.first().toList() should containsAll(byteArrayOf(
                         0,
                         Socks4Handshake.Response.REJECTED.code,
                         0, 0,
