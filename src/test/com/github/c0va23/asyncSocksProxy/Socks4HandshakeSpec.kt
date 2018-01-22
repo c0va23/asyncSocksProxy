@@ -1,8 +1,6 @@
 import java.net.Inet4Address
 
 import io.kotlintest.matchers.shouldBe
-import io.kotlintest.matchers.containsAll
-import io.kotlintest.matchers.should
 import io.kotlintest.specs.FreeSpec
 
 import com.github.c0va23.asyncSocksProxy.Socks4Handshake
@@ -10,6 +8,7 @@ import com.github.c0va23.asyncSocksProxy.Socks4RequestData
 import com.github.c0va23.asyncSocksProxy.Command
 
 import com.github.c0va23.asyncSocksProxy.support.ByteChannelMock
+import io.kotlintest.matchers.shouldEqual
 
 class Socks4HandshakeSpec : FreeSpec({
     fun Int.toPortBytes() : ByteArray =
@@ -92,12 +91,12 @@ class Socks4HandshakeSpec : FreeSpec({
             socks4Handshake.writeResponse(true, requestData)
 
             "write valid out buffer" {
-                sourceChannel.outBuffers.first().toList() should containsAll(byteArrayOf(
+                sourceChannel.outBuffers.first().toList() shouldEqual listOf(
                         0,
                         Socks4Handshake.Response.GRANTED.code,
                         0, 0,
                         0, 0, 0, 0
-                ).toList())
+                )
             }
         }
 
@@ -113,12 +112,12 @@ class Socks4HandshakeSpec : FreeSpec({
             socks4Handshake.writeResponse(false, requestData)
 
             "write valid out buffer" {
-                sourceChannel.outBuffers.first().toList() should containsAll(byteArrayOf(
+                sourceChannel.outBuffers.first().toList() shouldEqual listOf(
                         0,
                         Socks4Handshake.Response.REJECTED.code,
                         0, 0,
                         0, 0, 0, 0
-                ).toList())
+                )
             }
 
         }
