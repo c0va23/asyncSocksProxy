@@ -26,7 +26,7 @@ Socks 5 implement partly.
 |-----------------------------|---------------|
 | NO AUTHENTICATION REQUIRED  | Yes           |
 | GSSAPI                      | No            |
-| USERNAME/PASSWORD           | No            |
+| USERNAME/PASSWORD           | Yes           |
 
 ## Command
 
