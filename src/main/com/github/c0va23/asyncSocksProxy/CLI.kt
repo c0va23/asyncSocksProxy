@@ -12,7 +12,9 @@ fun main(args: Array<String>) {
         val port = args.getOrNull(1)?.toInt() ?: 1080
         val address = InetAddress.getByName(host)
 
+        val connector = SocketConnector
         val socksHandshake = SocksHandshake(
+                connector,
                 Socks4Handshake(),
                 Socks5Handshake()
         )

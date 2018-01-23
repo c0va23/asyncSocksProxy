@@ -5,6 +5,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.*
+import java.nio.channels.spi.AbstractSelectableChannel
 import java.util.logging.Logger
 
 /**
@@ -138,8 +139,8 @@ class SocksProxyServer(
         }
     }
 
-    private fun registerConnections(sourceSocketChannel: SocketChannel,
-                                   targetSocketChannel: SocketChannel) {
+    private fun registerConnections(sourceSocketChannel: AbstractSelectableChannel,
+                                   targetSocketChannel: AbstractSelectableChannel) {
         sourceSocketChannel.configureBlocking(false)
         targetSocketChannel.configureBlocking(false)
         val clientSelectionKey = sourceSocketChannel.register(selector, SelectionKey.OP_READ)

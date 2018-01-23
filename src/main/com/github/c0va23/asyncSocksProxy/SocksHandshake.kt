@@ -1,9 +1,8 @@
 package com.github.c0va23.asyncSocksProxy
 
-import java.io.IOException
-import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.SocketChannel
+import java.nio.channels.ByteChannel
+import java.nio.channels.spi.AbstractSelectableChannel
 import java.util.logging.Logger
 
 /**
@@ -11,13 +10,14 @@ import java.util.logging.Logger
  */
 
 class SocksHandshake(
+        private val connector: Connector,
         private vararg val socksHandshakes: SocksHandshakeInterface
 ) {
     private val bufferSize: Int = 1
 
     private val logger = Logger.getLogger(javaClass.name)
 
-    fun handshake(clientSocketChannel: SocketChannel): SocketChannel? = try {
+    fun handshake(clientSocketChannel: ByteChannel): AbstractSelectableChannel? = try {
         val buffer = ByteBuffer.allocate(bufferSize)
         val readBytes = clientSocketChannel.read(buffer)
 
@@ -31,26 +31,13 @@ class SocksHandshake(
             ?: throw UnknownVersion(socksVersion)
 
         val requestData = socksHandshake.parseRequest(clientSocketChannel)
-        val remoteChannel = connect(requestData)
+        val remoteChannel = connector.connect(requestData)
         val connected = null != remoteChannel
         socksHandshake.writeResponse(clientSocketChannel, connected, requestData)
 
         remoteChannel
     } catch (e: SocksException) {
-        logger.severe(e.message)
-        null
-    }
-
-    private fun connect(requestData: RequestData): SocketChannel? = try {
-        val socketAddress = InetSocketAddress(
-                requestData.address,
-                requestData.port)
-        when (requestData.command) {
-            Command.CONNECT -> SocketChannel.open(socketAddress)
-            else -> throw UnimplementedCommand(requestData.command)
-        }
-    } catch (e: IOException) {
-        logger.severe(e.message)
+        logger.warning(e.message)
         null
     }
 }
