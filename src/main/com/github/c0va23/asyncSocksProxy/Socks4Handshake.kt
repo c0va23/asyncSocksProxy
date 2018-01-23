@@ -6,9 +6,7 @@ import java.nio.channels.ByteChannel
 import java.nio.charset.Charset
 import java.util.logging.Logger
 
-class Socks4Handshake(
-        private val sourceChannel: ByteChannel
-) : SocksHandshake {
+class Socks4Handshake : SocksHandshakeInterface {
     private val nullByte: Byte = 0x00
     private val nullShort: Short = 0x00
     private val nullInt: Int = 0x00
@@ -25,9 +23,11 @@ class Socks4Handshake(
         REJECTED(0x5B);
     }
 
-    override fun parseRequest(): Socks4RequestData {
+    override val version: Byte = 0x04
+
+    override fun parseRequest(byteChannel: ByteChannel): Socks4RequestData {
         try {
-            val readBytes = sourceChannel.read(buffer)
+            val readBytes = byteChannel.read(buffer)
             logger.fine("Read $readBytes bytes")
 
             buffer.flip()
@@ -58,7 +58,11 @@ class Socks4Handshake(
         }
     }
 
-    override fun writeResponse(connected: Boolean, requestData: RequestData) {
+    override fun writeResponse(
+            byteChannel: ByteChannel,
+            connected: Boolean,
+            requestData: RequestData
+    ) {
         try {
             buffer.put(nullByte)
             buffer.put(
@@ -68,7 +72,7 @@ class Socks4Handshake(
             buffer.putInt(nullInt)
             buffer.flip()
 
-            sourceChannel.write(buffer)
+            byteChannel.write(buffer)
             if (connected)
                 logger.info("Request granted")
             else

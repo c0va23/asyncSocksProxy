@@ -58,9 +58,9 @@ class Socks5HandshakeSpec : FreeSpec({
                 val commandRequestPayload = buildCommandRequestPayload(
                         command, addressType, addressHost, port)
                 val byteChannel = ByteChannelMock(listOf(authRequestPayload, commandRequestPayload))
-                val socks5Handshake = Socks5Handshake(byteChannel)
+                val socks5Handshake = Socks5Handshake()
 
-                socks5Handshake.parseRequest() shouldBe Socks5RequestData(
+                socks5Handshake.parseRequest(byteChannel) shouldBe Socks5RequestData(
                         command = command,
                         address = address,
                         port = port
@@ -76,9 +76,9 @@ class Socks5HandshakeSpec : FreeSpec({
             "write only NO_ACCEPTABLE_METHODS" {
                 val authRequestPayload = buildAuthRequestPayload(Method.GSSAPI)
                 val byteChannel = ByteChannelMock(listOf(authRequestPayload))
-                val socks5Handshake = Socks5Handshake(byteChannel)
+                val socks5Handshake = Socks5Handshake()
 
-                shouldThrow<NoAcceptableMethods> { socks5Handshake.parseRequest() }
+                shouldThrow<NoAcceptableMethods> { socks5Handshake.parseRequest(byteChannel) }
 
                 byteChannel.outBuffers.size shouldEqual 1
 
@@ -92,9 +92,9 @@ class Socks5HandshakeSpec : FreeSpec({
             "write only NO_ACCEPTABLE_METHODS" {
                 val authRequestPayload = byteArrayOf(1, 12)
                 val byteChannel = ByteChannelMock(listOf(authRequestPayload))
-                val socks5Handshake = Socks5Handshake(byteChannel)
+                val socks5Handshake = Socks5Handshake()
 
-                shouldThrow<NoAcceptableMethods> { socks5Handshake.parseRequest() }
+                shouldThrow<NoAcceptableMethods> { socks5Handshake.parseRequest(byteChannel) }
 
                 byteChannel.outBuffers.size shouldEqual 1
 
@@ -115,7 +115,7 @@ class Socks5HandshakeSpec : FreeSpec({
             "write success response" {
                 forAll(socketTable) { address: InetAddress, addressType: AddressType, port: Int ->
                     val byteChannel = ByteChannelMock(listOf())
-                    val socks5Handshake = Socks5Handshake(byteChannel)
+                    val socks5Handshake = Socks5Handshake()
 
                     val requestData = Socks5RequestData(
                             address = address,
@@ -123,7 +123,7 @@ class Socks5HandshakeSpec : FreeSpec({
                             command = Command.CONNECT
                     )
 
-                    socks5Handshake.writeResponse(true, requestData)
+                    socks5Handshake.writeResponse(byteChannel,true, requestData)
 
                     val responseBytes = byteChannel.outBuffers.first()
 
@@ -146,7 +146,7 @@ class Socks5HandshakeSpec : FreeSpec({
             "write reject response" {
                 forAll(socketTable) { address: InetAddress, addressType: AddressType, port: Int ->
                     val byteChannel = ByteChannelMock(listOf())
-                    val socks5Handshake = Socks5Handshake(byteChannel)
+                    val socks5Handshake = Socks5Handshake()
 
                     val requestData = Socks5RequestData(
                             address = address,
@@ -154,7 +154,7 @@ class Socks5HandshakeSpec : FreeSpec({
                             command = Command.CONNECT
                     )
 
-                    socks5Handshake.writeResponse(false, requestData)
+                    socks5Handshake.writeResponse(byteChannel, false, requestData)
 
                     val responseBytes = byteChannel.outBuffers.first()
 

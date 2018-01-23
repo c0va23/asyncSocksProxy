@@ -11,6 +11,7 @@ import java.util.logging.Logger
  * Created by c0va23 on 30.12.17.
  */
 class SocksProxyServer(
+    private val socksHandshake: SocksHandshake,
     private val address: InetAddress,
     private val port: Int
 ) {
@@ -95,7 +96,7 @@ class SocksProxyServer(
     private fun accept(selectionKey: SelectionKey) {
         val serverSocketChannel = selectionKey.channel() as ServerSocketChannel
         val clientChannel = serverSocketChannel.accept()
-        val remoteChannel = SocksHandshake.handshake(clientChannel)
+        val remoteChannel = socksHandshake.handshake(clientChannel)
         if(null == remoteChannel) {
             clientChannel.close()
             return

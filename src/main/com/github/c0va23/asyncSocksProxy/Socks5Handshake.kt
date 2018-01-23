@@ -8,9 +8,7 @@ import java.nio.channels.ByteChannel
 import java.nio.charset.Charset
 import java.util.logging.Logger
 
-class Socks5Handshake(
-        private val sourceChannel: ByteChannel
-) : SocksHandshake {
+class Socks5Handshake : SocksHandshakeInterface {
     private val bufferSize = 128
     private val socksVersion: Byte = 0x05
 
@@ -49,27 +47,29 @@ class Socks5Handshake(
 
     private val allowedMethods = arrayOf(Method.NO_AUTHENTICATION_REQUIRED)
 
-    override fun parseRequest(): RequestData {
+    override val version: Byte = 0x05
+
+    override fun parseRequest(byteChannel: ByteChannel): RequestData {
         try {
-            val methods = parseMethods()
+            val methods = parseMethods(byteChannel)
 
             val selectedMethod = methods.find { it in allowedMethods }
                     ?: Method.NO_ACCEPTABLE_METHODS
 
-            writeSelectedMethod(selectedMethod)
+            writeSelectedMethod(byteChannel, selectedMethod)
 
             if(Method.NO_ACCEPTABLE_METHODS == selectedMethod)
                 throw NoAcceptableMethods(methods.map { it.toString() })
 
-            return parseCommand()
+            return parseCommand(byteChannel)
         } finally {
             buffer.clear()
         }
     }
 
-    private fun parseMethods(): List<Method> {
+    private fun parseMethods(byteChannel: ByteChannel): List<Method> {
         try {
-            val readBytes = sourceChannel.read(buffer)
+            val readBytes = byteChannel.read(buffer)
             logger.fine("Read $readBytes bytes")
             buffer.flip()
 
@@ -84,21 +84,21 @@ class Socks5Handshake(
         }
     }
 
-    private fun writeSelectedMethod(method: Method) {
+    private fun writeSelectedMethod(byteChannel: ByteChannel, method: Method) {
         try {
             buffer.put(socksVersion)
             buffer.put(method.code)
             buffer.flip()
 
-            sourceChannel.write(buffer)
+            byteChannel.write(buffer)
         } finally {
             buffer.clear()
         }
     }
 
-    private fun parseCommand(): RequestData {
+    private fun parseCommand(byteChannel: ByteChannel): RequestData {
         try {
-            val readBytes = sourceChannel.read(buffer)
+            val readBytes = byteChannel.read(buffer)
             logger.fine("Read $readBytes bytes")
             buffer.flip()
 
@@ -149,7 +149,11 @@ class Socks5Handshake(
         return InetAddress.getByName(domainName)
     }
 
-    override fun writeResponse(connected: Boolean, requestData: RequestData) {
+    override fun writeResponse(
+            byteChannel: ByteChannel,
+            connected: Boolean,
+            requestData: RequestData
+    ) {
         try {
             buffer.put(socksVersion)
             buffer.put(
@@ -167,7 +171,7 @@ class Socks5Handshake(
             buffer.putShort(requestData.port.toShort())
             buffer.flip()
 
-            val writeBytes = sourceChannel.write(buffer)
+            val writeBytes = byteChannel.write(buffer)
             logger.fine("Write $writeBytes bytes")
 
             if(connected) logger.info("Request successful")

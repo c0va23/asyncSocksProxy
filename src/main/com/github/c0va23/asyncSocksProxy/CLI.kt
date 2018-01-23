@@ -12,7 +12,11 @@ fun main(args: Array<String>) {
         val port = args.getOrNull(1)?.toInt() ?: 1080
         val address = InetAddress.getByName(host)
 
-        val proxyServer = SocksProxyServer(address, port)
+        val socksHandshake = SocksHandshake(
+                Socks4Handshake(),
+                Socks5Handshake()
+        )
+        val proxyServer = SocksProxyServer(socksHandshake, address, port)
 
         while(true) {
             val command = readLine()
