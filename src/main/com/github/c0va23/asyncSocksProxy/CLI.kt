@@ -1,5 +1,6 @@
 package com.github.c0va23.asyncSocksProxy
 
+import com.github.c0va23.asyncSocksProxy.socks5AuthMethods.NoAuthenticationRequired
 import java.net.InetAddress
 import java.util.logging.Logger
 
@@ -13,10 +14,11 @@ fun main(args: Array<String>) {
         val address = InetAddress.getByName(host)
 
         val connector = SocketConnector
+        val socksAuthMethods = listOf(NoAuthenticationRequired)
         val socksHandshake = SocksHandshake(
                 connector,
                 Socks4Handshake(),
-                Socks5Handshake()
+                Socks5Handshake(socksAuthMethods)
         )
         val proxyServer = SocksProxyServer(socksHandshake, address, port)
 

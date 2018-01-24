@@ -1,5 +1,6 @@
 package com.github.c0va23.asyncSocksProxy
 
+import com.github.c0va23.asyncSocksProxy.socks5AuthMethods.AuthMethodInterface
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
@@ -8,17 +9,19 @@ import java.nio.channels.ByteChannel
 import java.nio.charset.Charset
 import java.util.logging.Logger
 
-class Socks5Handshake : SocksHandshakeInterface {
-    private val bufferSize = 128
-    private val socksVersion: Byte = 0x05
-
+class Socks5Handshake(
+        allowedMethods: Iterable<AuthMethodInterface>
+) : SocksHandshakeInterface {
     private val nullByte: Byte = 0x00
 
+    private val bufferSize = 128
     private val buffer = ByteBuffer.allocate(bufferSize)
     private val logger = Logger.getLogger(javaClass.name)
 
     private val ipv4Size = 4
     private val ipv6Size = 16
+
+    private val allowedMethodMap = allowedMethods.associateBy { it.code }
 
     enum class Response(val code: Byte) {
         SUCCEEDED(0x00),
@@ -31,21 +34,9 @@ class Socks5Handshake : SocksHandshakeInterface {
         Ipv6(0x04),
     }
 
-    enum class Method(val code: Byte) {
-        NO_AUTHENTICATION_REQUIRED(0x00),
-        GSSAPI(0x01),
-        USERNAME_PASSWORD(0x02),
-        NO_ACCEPTABLE_METHODS(0xFF.toByte());
-
-        companion object {
-            private val map =
-                    Method.values().associateBy { it.code }
-
-            fun fromValue(code: Byte): Method? = map[code]
-        }
+    companion object {
+        const val NO_ACCEPTABLE_METHODS = 0xFF.toByte()
     }
-
-    private val allowedMethods = arrayOf(Method.NO_AUTHENTICATION_REQUIRED)
 
     override val version: Byte = 0x05
 
@@ -53,13 +44,13 @@ class Socks5Handshake : SocksHandshakeInterface {
         try {
             val methods = parseMethods(byteChannel)
 
-            val selectedMethod = methods.find { it in allowedMethods }
-                    ?: Method.NO_ACCEPTABLE_METHODS
+            val selectedMethod = methods.mapNotNull(allowedMethodMap::get).elementAtOrNull(0)
 
-            writeSelectedMethod(byteChannel, selectedMethod)
+            writeSelectedMethod(byteChannel, selectedMethod?.code ?: NO_ACCEPTABLE_METHODS)
 
-            if(Method.NO_ACCEPTABLE_METHODS == selectedMethod)
-                throw NoAcceptableMethods(methods.map { it.toString() })
+            selectedMethod ?: throw NoAcceptableMethods(methods.map { it.toString() })
+
+            selectedMethod.authenticate(byteChannel)
 
             return parseCommand(byteChannel)
         } finally {
@@ -67,7 +58,7 @@ class Socks5Handshake : SocksHandshakeInterface {
         }
     }
 
-    private fun parseMethods(byteChannel: ByteChannel): List<Method> {
+    private fun parseMethods(byteChannel: ByteChannel): List<Byte> {
         try {
             val readBytes = byteChannel.read(buffer)
             logger.fine("Read $readBytes bytes")
@@ -78,16 +69,15 @@ class Socks5Handshake : SocksHandshakeInterface {
 
             return (0 until numberMethods)
                     .map { buffer.get() }
-                    .mapNotNull { Method.fromValue(it) }
         } finally {
             buffer.clear()
         }
     }
 
-    private fun writeSelectedMethod(byteChannel: ByteChannel, method: Method) {
+    private fun writeSelectedMethod(byteChannel: ByteChannel, methodCode: Byte) {
         try {
-            buffer.put(socksVersion)
-            buffer.put(method.code)
+            buffer.put(version)
+            buffer.put(methodCode)
             buffer.flip()
 
             byteChannel.write(buffer)
@@ -103,7 +93,7 @@ class Socks5Handshake : SocksHandshakeInterface {
             buffer.flip()
 
             val version = buffer.get()
-            if (version != socksVersion) throw UnknownVersion(version)
+            if (version != this.version) throw UnknownVersion(version)
             logger.fine("Version $version")
 
             val command = buffer.get()
@@ -155,7 +145,7 @@ class Socks5Handshake : SocksHandshakeInterface {
             requestData: RequestData
     ) {
         try {
-            buffer.put(socksVersion)
+            buffer.put(version)
             buffer.put(
                     if (connected) Response.SUCCEEDED.code
                     else Response.FAILURE.code
