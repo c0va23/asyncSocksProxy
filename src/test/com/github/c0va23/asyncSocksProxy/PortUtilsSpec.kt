@@ -46,7 +46,7 @@ class PortUtilsSpec : FreeSpec({
         "return valid port from high bytes" {
             val bytes = byteArrayOf(0xFF.toByte(), 0xFF.toByte())
             val port = Int.fromPortBytes(bytes)
-            port shouldEqual maxPort
+            port shouldEqual MAX_PORT
         }
     }
 })
