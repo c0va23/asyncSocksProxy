@@ -5,12 +5,14 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.*
+import java.nio.channels.spi.AbstractSelectableChannel
 import java.util.logging.Logger
 
 /**
  * Created by c0va23 on 30.12.17.
  */
 class SocksProxyServer(
+    private val socksHandshake: SocksHandshake,
     private val address: InetAddress,
     private val port: Int
 ) {
@@ -95,7 +97,7 @@ class SocksProxyServer(
     private fun accept(selectionKey: SelectionKey) {
         val serverSocketChannel = selectionKey.channel() as ServerSocketChannel
         val clientChannel = serverSocketChannel.accept()
-        val remoteChannel = SocksHandshake.handshake(clientChannel)
+        val remoteChannel = socksHandshake.handshake(clientChannel)
         if(null == remoteChannel) {
             clientChannel.close()
             return
@@ -137,8 +139,8 @@ class SocksProxyServer(
         }
     }
 
-    private fun registerConnections(sourceSocketChannel: SocketChannel,
-                                   targetSocketChannel: SocketChannel) {
+    private fun registerConnections(sourceSocketChannel: AbstractSelectableChannel,
+                                   targetSocketChannel: AbstractSelectableChannel) {
         sourceSocketChannel.configureBlocking(false)
         targetSocketChannel.configureBlocking(false)
         val clientSelectionKey = sourceSocketChannel.register(selector, SelectionKey.OP_READ)

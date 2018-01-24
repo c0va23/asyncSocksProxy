@@ -3,6 +3,7 @@
 Implement Socks 4/5 tunnel for JVM.
 
 [![Release](https://jitpack.io/v/c0va23/asyncSocksProxy.svg)](https://jitpack.io/#c0va23/asyncSocksProxy)
+[![Build Status](https://travis-ci.org/c0va23/asyncSocksProxy.svg?branch=master)](https://travis-ci.org/c0va23/asyncSocksProxy)
 
 # Socks 4
 
@@ -40,5 +41,5 @@ Socks 5 implement partly.
 | Type       | Implemented  |
 |------------|--------------|
 | IP V4      | Yes          |
-| DOMAINNAME | No           |
+| DOMAINNAME | Yes          |
 | IP V6      | Yes          |

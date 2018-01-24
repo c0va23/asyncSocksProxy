@@ -2,12 +2,11 @@ package com.github.c0va23.asyncSocksProxy
 
 import java.net.Inet4Address
 import java.nio.ByteBuffer
-import java.nio.channels.SocketChannel
+import java.nio.channels.ByteChannel
+import java.nio.charset.Charset
 import java.util.logging.Logger
 
-class Socks4Handshake(
-        private val sourceChannel: SocketChannel
-) : SocksHandshake {
+class Socks4Handshake : SocksHandshakeInterface {
     private val nullByte: Byte = 0x00
     private val nullShort: Short = 0x00
     private val nullInt: Int = 0x00
@@ -17,27 +16,36 @@ class Socks4Handshake(
     private val logger = Logger.getLogger(javaClass.name)
     private val buffer = ByteBuffer.allocate(bufferSize)
 
-    private enum class Response(val code: Byte) {
+    private val charset = Charset.forName("UTF-8")
+
+    enum class Response(val code: Byte) {
         GRANTED(0x5A),
         REJECTED(0x5B);
     }
 
-    override fun parseRequest(): Socks4RequestData {
+    override val version: Byte = 0x04
+
+    override fun parseRequest(byteChannel: ByteChannel): Socks4RequestData {
         try {
-            val readBytes = sourceChannel.read(buffer)
+            val readBytes = byteChannel.read(buffer)
             logger.fine("Read $readBytes bytes")
 
             buffer.flip()
 
             val command = buffer.get()
 
-            val port = buffer.short.toInt()
+            val portBytes = ByteArray(2)
+            buffer.get(portBytes)
+            val port = Int.fromPortBytes(portBytes)
+
             val addressBytes = ByteArray(4)
             buffer.get(addressBytes)
             val address = Inet4Address.getByAddress(addressBytes)
+
             logger.fine("Address: $address:$port")
 
-            val userId = buffer.slice().asCharBuffer().toString()
+            buffer.limit(buffer.limit() - 1) // Remove tailing zero byte
+            val userId = charset.decode(buffer.slice()).toString()
             logger.fine("User ID: $userId")
 
             return Socks4RequestData(
@@ -50,7 +58,11 @@ class Socks4Handshake(
         }
     }
 
-    override fun writeResponse(connected: Boolean, requestData: RequestData) {
+    override fun writeResponse(
+            byteChannel: ByteChannel,
+            connected: Boolean,
+            requestData: RequestData
+    ) {
         try {
             buffer.put(nullByte)
             buffer.put(
@@ -60,7 +72,7 @@ class Socks4Handshake(
             buffer.putInt(nullInt)
             buffer.flip()
 
-            sourceChannel.write(buffer)
+            byteChannel.write(buffer)
             if (connected)
                 logger.info("Request granted")
             else

@@ -7,11 +7,11 @@ class UnknownVersion(version: Byte) :
 class UnknownCommand(code: Byte) :
         SocksException("Unknown command code $code")
 
-class UnknownMethod(code: Short) :
-        SocksException("Unknown method $code")
-
 class UnimplementedCommand(command: Command) :
         SocksException("Unknown command $command")
 
 class UnimplementedAddressType(addressType: Byte) :
         SocksException("Unimplemented address type $addressType")
+
+class NoAcceptableMethods(methods: Iterable<String>) :
+        Exception("No acceptable methods ${methods.joinToString(separator = ", ")}")

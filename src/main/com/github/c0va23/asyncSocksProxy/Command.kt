@@ -1,7 +1,7 @@
 package com.github.c0va23.asyncSocksProxy
 
 enum class Command(
-        private val code: Byte
+        val code: Byte
 ) {
     CONNECT(0x01),
     BINDING(0x02),
