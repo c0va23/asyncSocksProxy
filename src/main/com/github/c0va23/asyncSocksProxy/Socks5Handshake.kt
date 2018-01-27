@@ -40,6 +40,7 @@ class Socks5Handshake(
 
     override val version: Byte = 0x05
 
+    @Throws(SocksException::class)
     override fun parseRequest(byteChannel: ByteChannel): RequestData {
         try {
             val methods = parseMethods(byteChannel)
