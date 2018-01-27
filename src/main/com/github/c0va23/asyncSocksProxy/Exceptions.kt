@@ -14,4 +14,4 @@ class UnimplementedAddressType(addressType: Byte) :
         SocksException("Unimplemented address type $addressType")
 
 class NoAcceptableMethods(methods: Iterable<String>) :
-        Exception("No acceptable methods ${methods.joinToString(separator = ", ")}")
+        SocksException("No acceptable methods ${methods.joinToString(separator = ", ")}")
