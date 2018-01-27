@@ -8,8 +8,8 @@ import io.kotlintest.specs.FreeSpec
 import java.nio.channels.spi.AbstractSelectableChannel
 
 class SocksHandshakeSpec : FreeSpec({
-    "handshake(byteChannel)" - {
-        "when SocksHandshake constructed without socksHandshakes" -  {
+    "handshake()" - {
+        "when SocksHandshake constructed without socksHandshakes" - {
             val connector = mock<Connector>()
             val socksHandshake = SocksHandshake(connector)
 
@@ -40,7 +40,7 @@ class SocksHandshakeSpec : FreeSpec({
                 "then perform first handshake" {
                     `when`(firstSocksHandshake.parseRequest(inputChannel)).thenReturn(requestData)
                     `when`(firstSocksHandshake.writeResponse(inputChannel, true, requestData))
-                            .then{}
+                            .then {}
 
                     socksHandshake.handshake(inputChannel) shouldBe resultChannel
                 }
@@ -52,7 +52,7 @@ class SocksHandshakeSpec : FreeSpec({
                 "then perform first handshake" {
                     `when`(secondSocksHandshake.parseRequest(inputChannel)).thenReturn(requestData)
                     `when`(secondSocksHandshake.writeResponse(inputChannel, true, requestData))
-                            .then{}
+                            .then {}
 
                     socksHandshake.handshake(inputChannel) shouldBe resultChannel
                 }
@@ -60,50 +60,69 @@ class SocksHandshakeSpec : FreeSpec({
         }
 
         "when socksHandshake construct with one socksHandshake" - {
-            val someSocksHandshake = mock<SocksHandshakeInterface>()
-            `when`(someSocksHandshake.version).thenReturn(0x10)
+            val inputChannel = ByteChannelMock(listOf(byteArrayOf(0x10)))
 
-            val requestData = mock<RequestData>()
             val resultChannel = mock<AbstractSelectableChannel>()
 
-            "when connect success" - {
-                val connector = mock<Connector>()
-                `when`(connector.connect(requestData)).thenReturn(resultChannel)
-                val socksHandshake = SocksHandshake(connector, someSocksHandshake)
-                val inputChannel = ByteChannelMock(listOf(byteArrayOf(0x10)))
+            "when parseRequest is success" - {
+                val someSocksHandshake = mock<SocksHandshakeInterface>()
+                `when`(someSocksHandshake.version).thenReturn(0x10)
 
-                "then return new connection" {
-                    `when`(someSocksHandshake.parseRequest(inputChannel)).thenReturn(requestData)
+                val requestData = mock<RequestData>()
+                `when`(someSocksHandshake.parseRequest(inputChannel)).thenReturn(requestData)
+
+
+                "when connect success" - {
                     `when`(someSocksHandshake.writeResponse(inputChannel, true, requestData))
-                            .then{}
+                            .then {}
 
-                    socksHandshake.handshake(inputChannel) shouldBe resultChannel
+                    val connector = mock<Connector>()
+                    `when`(connector.connect(requestData)).thenReturn(resultChannel)
+
+                    val socksHandshake = SocksHandshake(connector, someSocksHandshake)
+
+                    "then return new connection" {
+                        socksHandshake.handshake(inputChannel) shouldBe resultChannel
+                    }
+                }
+
+                "when connect failure" - {
+                    `when`(someSocksHandshake.writeResponse(inputChannel, false, requestData))
+                            .then {}
+
+                    val connector = mock<Connector>()
+                    `when`(connector.connect(requestData)).thenReturn(null)
+
+                    val socksHandshake = SocksHandshake(connector, someSocksHandshake)
+
+                    "then return null" {
+                        socksHandshake.handshake(inputChannel) shouldBe null
+                    }
+                }
+
+                "when connect throw UnimplementedCommand" - {
+                    val connector = mock<Connector>()
+                    `when`(connector.connect(requestData)).thenThrow(UnimplementedCommand(Command.BINDING))
+
+                    val socksHandshake = SocksHandshake(connector, someSocksHandshake)
+
+                    "then return null" {
+                        socksHandshake.handshake(inputChannel) shouldBe null
+                    }
                 }
             }
 
-            "when connect failure" - {
+            "when parseRequest throw SocketException" - {
+                val someSocksHandshake = mock<SocksHandshakeInterface>()
+                `when`(someSocksHandshake.version).thenReturn(0x10)
+
+                val socksException = mock<SocksException>()
+                `when`(someSocksHandshake.parseRequest(inputChannel)).thenThrow(socksException)
+
                 val connector = mock<Connector>()
-                `when`(connector.connect(requestData)).thenReturn(null)
-
-                val inputChannel = ByteChannelMock(listOf(byteArrayOf(0x10)))
                 val socksHandshake = SocksHandshake(connector, someSocksHandshake)
-                `when`(someSocksHandshake.parseRequest(inputChannel)).thenReturn(requestData)
-                `when`(someSocksHandshake.writeResponse(inputChannel, false, requestData))
-                        .then{}
 
-                "then return null" {
-                    socksHandshake.handshake(inputChannel) shouldBe null
-                }
-            }
-
-            "when connect throw UnimplementedCommand" - {
-                val connector = mock<Connector>()
-                `when`(connector.connect(requestData)).thenThrow(UnimplementedCommand(Command.BINDING))
-                val socksHandshake = SocksHandshake(connector, someSocksHandshake)
-                val inputChannel = ByteChannelMock(listOf(byteArrayOf(0x10)))
-                `when`(someSocksHandshake.parseRequest(inputChannel)).thenReturn(requestData)
-
-                "then return null" {
+                "return null" {
                     socksHandshake.handshake(inputChannel) shouldBe null
                 }
             }
